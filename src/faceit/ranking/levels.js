@@ -100,15 +100,24 @@ const newLevelsModule = new Module("levels", async () => {
     const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking");
     if (!enabled) return;
 
-    await newLevelsModule.doAfterNodeAppear('#main-header-height-wrapper div[class*="styles__ProfileContainer"]', async (element) => {
+    const style = document.createElement('style');
+    style.textContent = `
+    [data-repeek-level-progress]:not([id*="content-grid-element"]) a[href*="/stats"]:not([id="user-url"],[type="primary"]) {
+        display: none !important;
+    }
+    `;
+    document.documentElement.appendChild(style)
+
+    await newLevelsModule.doAfterNodeAppear('[class*="Content__StyledContentElement"]', async (element) => {
         let uniqueCheck = () => element.parentElement.querySelector('[id*="statistic-progress-bar"]')
         if (!uniqueCheck()) {
-            newLevelsModule.doAfter(() => element.querySelector('[class*="styles__NicknameText-"]'), async (result) => {
+            newLevelsModule.doAfter(() => element.querySelector('[class*="styles__HeadingWrapper"]'), async (result) => {
                 if (uniqueCheck()) return
                 let nick = result.innerText
                 let newNode = document.createElement("div")
-                let parent = element.parentElement
-                parent.children[1].insertAdjacentElement("afterend", newNode)
+                let parent = result.parentElement.parentElement
+                console.log(parent)
+                parent.querySelector('[class*="styles__BottomAreaWrapper"]').insertAdjacentElement("afterbegin", newNode)
                 let newTable = getHtmlResource("src/visual/tables/elo-progress-bar.html").cloneNode(true)
                 newTable.id = "statistic-progress-bar"
                 newTable.appendToAndHide(newNode)
@@ -116,18 +125,6 @@ const newLevelsModule = new Module("levels", async () => {
                 await insertStatsToEloBar(nick)
             })
         }
-    })
-
-    await newLevelsModule.doAfterNodeAppear('[data-repeek-level-progress]:not([id*="content-grid-element"])', async (element) => {
-        let uniqueCheck = () => element.hasAttribute("data-processed")
-        if (uniqueCheck()) return
-        newLevelsModule.processedNode(element)
-        newLevelsModule.every(100, () => {
-            let repeekBar = element.querySelector('a[href]:not([id="user-url"],[type="primary"])')
-            if (repeekBar.style.display !== "none") {
-                hideNode(repeekBar)
-            }
-        })
     })
 
     const defineUrlType = (url) => {
