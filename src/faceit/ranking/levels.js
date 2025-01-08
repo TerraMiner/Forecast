@@ -116,7 +116,6 @@ const newLevelsModule = new Module("levels", async () => {
                 let nick = result.innerText
                 let newNode = document.createElement("div")
                 let parent = result.parentElement.parentElement
-                console.log(parent)
                 parent.querySelector('[class*="styles__BottomAreaWrapper"]').insertAdjacentElement("afterbegin", newNode)
                 let newTable = getHtmlResource("src/visual/tables/elo-progress-bar.html").cloneNode(true)
                 newTable.id = "statistic-progress-bar"
