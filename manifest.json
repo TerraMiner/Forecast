@@ -27,6 +27,7 @@
         "src/module/module.js",
         "src/faceit/resources/resources.js",
         "src/faceit/room/matchroom.js",
+        "src/faceit/history/matchhistorycache.js",
         "src/faceit/history/matchroom-popup.js",
         "src/faceit/history/matchhistory.js",
         "src/faceit/ranking/ranking.js",

@@ -1,96 +1,103 @@
 <style>
-    .tooltip {
-        display: flex;
-        flex-direction: row;
-        color: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    .popup-tooltip {
+        display: flex !important;
+        flex-direction: column;
+        gap: 5px;
     }
 
-    .scoreboard-table {
+    body .popup-tooltip .popup-scoreboard-table {
+        flex: 1;
         width: 100%;
         border-collapse: collapse;
+        border-spacing: 0;
         border-radius: 8px;
         font-size: 12px;
+        background-color: rgb(26, 26, 26) !important;
+        min-width: 0;
     }
 
-    .table-header {
-        background-color: rgb(31, 31, 31);
+    body .popup-tooltip .popup-table-header {
+        background-color: rgb(29, 29, 29) !important;
         color: #fff;
         text-align: center;
     }
 
-    .table-body {
-        background-color: rgb(36, 36, 36);
+    body .popup-tooltip .popup-table-body {
+        background-color: rgb(26, 26, 26) !important;
     }
 
-    .table-header .table-cell {
-        padding: 10px;
-    }
-
-    .table-header .table-cell:first-child {
-        border-top-left-radius: 8px;
-    }
-
-    .table-header .table-cell:last-child {
-        border-top-right-radius: 8px;
-    }
-
-    .table-body .table-row:last-child .table-cell:first-child {
-        border-bottom-left-radius: 8px;
-    }
-
-    .table-body .table-row:last-child .table-cell:last-child {
-        border-bottom-right-radius: 8px;
-    }
-
-    .table-row:not(.table-row:last-child) {
-        border-bottom: 1px solid rgb(48, 48, 48);
-    }
-
-    .table-cell {
+    body .popup-tooltip .popup-table-cell {
         padding: 8px;
         text-align: center;
         white-space: nowrap;
+        border: none;
+        background-color: transparent !important;
+    }
+
+    body .popup-tooltip .popup-table-row {
+        background-color: inherit !important;
+    }
+
+    body .popup-tooltip .popup-table-row:not(:last-child) {
+        border-bottom: 1px solid rgb(29, 29, 29);
+    }
+
+    body .popup-tooltip .popup-table-header .popup-table-cell {
+        padding: 10px;
+    }
+
+    body .popup-tooltip .popup-table-header .popup-table-cell:first-child {
+        border-top-left-radius: 8px;
+    }
+
+    body .popup-tooltip .popup-table-header .popup-table-cell:last-child {
+        border-top-right-radius: 8px;
+    }
+
+    body .popup-tooltip .popup-table-body .popup-table-row:last-child .popup-table-cell:first-child {
+        border-bottom-left-radius: 8px;
+    }
+
+    body .popup-tooltip .popup-table-body .popup-table-row:last-child .popup-table-cell:last-child {
+        border-bottom-right-radius: 8px;
     }
 </style>
 
-<div class="tooltip">
-    <table class="scoreboard-table">
-        <thead class="table-header">
-        <tr class="table-row">
-            <td class="table-cell">Nick</td>
-            <td class="table-cell">K</td>
-            <td class="table-cell">A</td>
-            <td class="table-cell">D</td>
-            <td class="table-cell">K/R</td>
-            <td class="table-cell">K/D</td>
-            <td class="table-cell">Hs</td>
-            <td class="table-cell">Hs%</td>
-            <td class="table-cell">MVPs</td>
-            <td class="table-cell">ADR</td>
-        </tr>
+<div class="popup-tooltip">
+    <table class="popup-scoreboard-table">
+        <thead class="popup-table-header">
+            <tr class="popup-table-row">
+                <td class="popup-table-cell">Nick</td>
+                <td class="popup-table-cell">K</td>
+                <td class="popup-table-cell">A</td>
+                <td class="popup-table-cell">D</td>
+                <td class="popup-table-cell">K/R</td>
+                <td class="popup-table-cell">K/D</td>
+                <td class="popup-table-cell">Hs</td>
+                <td class="popup-table-cell">Hs%</td>
+                <td class="popup-table-cell">MVPs</td>
+                <td class="popup-table-cell">ADR</td>
+            </tr>
         </thead>
-        <tbody class="table-body" id="team-table-popup-1">
+        <tbody class="popup-table-body" id="team-table-popup-1">
         </tbody>
     </table>
-    <hr style="border: none; background-color: #ffffff; width: 5px; height: 100%; margin: 0 auto;" />
-    <table class="scoreboard-table">
-        <thead class="table-header">
-        <tr class="table-row">
-            <td class="table-cell">Nick</td>
-            <td class="table-cell">K</td>
-            <td class="table-cell">A</td>
-            <td class="table-cell">D</td>
-            <td class="table-cell">K/R</td>
-            <td class="table-cell">K/D</td>
-            <td class="table-cell">Hs</td>
-            <td class="table-cell">Hs%</td>
-            <td class="table-cell">MVPs</td>
-            <td class="table-cell">ADR</td>
-        </tr>
+    <table class="popup-scoreboard-table">
+        <thead class="popup-table-header">
+            <tr class="popup-table-row">
+                <td class="popup-table-cell">Nick</td>
+                <td class="popup-table-cell">K</td>
+                <td class="popup-table-cell">A</td>
+                <td class="popup-table-cell">D</td>
+                <td class="popup-table-cell">K/R</td>
+                <td class="popup-table-cell">K/D</td>
+                <td class="popup-table-cell">Hs</td>
+                <td class="popup-table-cell">Hs%</td>
+                <td class="popup-table-cell">MVPs</td>
+                <td class="popup-table-cell">ADR</td>
+            </tr>
         </thead>
-        <tbody class="table-body" id="team-table-popup-2">
+        <tbody class="popup-table-body" id="team-table-popup-2">
         </tbody>
     </table>
 </div>

@@ -30,7 +30,6 @@ async function fetchV4(cache, url, errorMsg) {
     return newData;
 }
 
-
 async function fetchMatchStats(matchId) {
     return fetchV4(
         matchDataCache,

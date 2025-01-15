@@ -192,8 +192,7 @@ class TeamWinRateCalculator {
                 let currentStyles = styleElement.innerHTML;
                 styleElement.innerHTML = currentStyles.replace('padding: 5px 3px;', 'padding: 10px;');
             }
-            const firstChildWithClass = innerNode.querySelector('[class]');
-            firstChildWithClass.insertAdjacentElement('afterend', htmlResource);
+            innerNode.insertAdjacentElement('afterend', htmlResource);
             matchRoomModule.removalNode(htmlResource);
 
             this.results.forEach((teamMap, teamName) => {

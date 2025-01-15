@@ -7,8 +7,8 @@ class Module {
         this.isLoaded = false;
         this.processedNodes = [];
         this.nodesToRemove = [];
+        this.hidedNodes = [];
         this.tasks = [];
-        this.tabId = 0
         this.observerTasks = []
         this.observer = null
     }
@@ -16,6 +16,7 @@ class Module {
     async #load() {
         if (this.isLoaded) return
         println(`Module ${this.name} is loading`);
+        this.#generateSessionId();
         this.registerObserver();
         await this.loadAction();
         this.isLoaded = true
@@ -27,6 +28,7 @@ class Module {
         await this.unloadAction();
         this.#releaseCaches();
         this.isLoaded = false
+        this.#generateSessionId();
         this.registerObserver();
         await this.loadAction();
         this.isLoaded = true
@@ -42,6 +44,10 @@ class Module {
         println(`Module ${this.name} is successfully disabled`);
     }
 
+    #generateSessionId() {
+        this.sessionId = Math.random().toString(36).substring(2, 10);
+    }
+
     #releaseCaches() {
         this.observerTasks.length = 0
         if (this.observer) {
@@ -49,14 +55,19 @@ class Module {
         }
 
         this.processedNodes.forEach((node) => {
-            node.removeAttribute('data-processed')
+            node?.removeAttribute('data-processed')
         });
         this.processedNodes.length = 0;
 
         this.nodesToRemove.forEach((node) => {
-            node.remove()
+            node?.remove()
         })
         this.nodesToRemove.length = 0
+
+        this.hidedNodes.forEach((node) => {
+            node?.style?.removeProperty('display')
+        });
+        this.hidedNodes.length = 0
 
         this.tasks.forEach((task) => {
             clearInterval(task)
@@ -66,12 +77,22 @@ class Module {
 
     processedNode(node) {
         this.processedNodes.push(node)
-        node.setAttribute('data-processed', 'true')
+        node.setAttribute('data-processed', '')
     }
 
-
+    //todo Уйти полностью с логики Removal Nodes и перейти на логику USID - Unique Session ID, использовать аналогично matchhistory.js - 125
     removalNode(node) {
         this.nodesToRemove.push(node)
+    }
+
+    appendToAndHide(sourceNode,hiddenNode) {
+        appendToAndHide(sourceNode,hiddenNode)
+        this.hidedNodes.push(hiddenNode)
+    }
+
+    preppendToAndHide(sourceNode,hiddenNode) {
+        preppendToAndHide(sourceNode,hiddenNode)
+        this.hidedNodes.push(hiddenNode)
     }
 
     doAfter(conditionFn, callback, interval = 50) {

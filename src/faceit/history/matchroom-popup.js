@@ -1,55 +1,105 @@
 class MatchroomPopup {
     constructor() {
         this.popupElement = getHtmlResource("src/visual/tables/hover-popup-matchroom.html").cloneNode(true);
+        this.popupElement.classList.add('popup-tooltip');
+        
         Object.assign(this.popupElement.style, {
             display: "none",
-            position: "absolute",
-            transition: "opacity 0.3s ease, transform 0.3s ease",
+            position: "fixed",
+            transition: "opacity 0.2s ease, transform 0.2s ease",
             opacity: "0",
+            transform: "translateY(-5px)",
             pointerEvents: "none",
             zIndex: 3
         });
-
-        document.body.appendChild(this.popupElement);
 
         this.targetNodes = new Map();
         this.activeTarget = null;
         this.isPopupVisible = false;
 
         document.addEventListener("click", this.handleDocumentClick.bind(this));
-
-        this.popupElement.addEventListener("mouseleave", this.handlePopupMouseLeave.bind(this));
     }
 
     attachToElement(element, matchStatistic, playerId) {
         if (this.targetNodes.has(element)) return;
-        this.playerId = playerId
+        this.playerId = playerId;
 
-        this.targetNodes.set(element, matchStatistic);
-        const button = element.querySelector('.show-popup-button');
+        const popupClone = this.popupElement.cloneNode(true);
+        popupClone.classList.add('popup-tooltip');
+        
         const popupContainer = element.querySelector('.show-popup-button-wrap');
+        
+        const popupWrapper = document.createElement('div');
+        Object.assign(popupWrapper.style, {
+            position: 'relative',
+            zIndex: 3
+        });
 
-        button.addEventListener("mouseenter", (event) => this.handleButtonMouseEnter(event, element));
-        button.addEventListener("mouseleave", this.handleButtonMouseLeave.bind(this));
-        popupContainer.addEventListener("mouseleave", this.handlePopupMouseLeave.bind(this));
+        popupWrapper.appendChild(popupClone);
+        popupContainer.appendChild(popupWrapper);
+
+        this.targetNodes.set(element, {
+            stats: matchStatistic,
+            popup: popupClone,
+            wrapper: popupWrapper
+        });
+
+        const button = element.querySelector('.show-popup-button');
+        
+        // Обработка событий мыши
+        const handleMouseEnter = (event) => {
+            // Если есть активный попап и это другой элемент, скрываем его
+            if (this.activeTarget && this.activeTarget !== element) {
+                this.hidePopup();
+            }
+            clearTimeout(this.hideTimeout);
+            this.handleButtonMouseEnter(event, element);
+        };
+
+        const handleMouseLeave = (event) => {
+            const { popup, wrapper } = this.targetNodes.get(element);
+            const relatedTarget = event.relatedTarget;
+            
+            // Проверяем, не наводимся ли мы на другую кнопку
+            const targetingOtherButton = relatedTarget && relatedTarget.closest('.show-popup-button');
+            
+            if ((!popup.contains(relatedTarget) && !wrapper.contains(relatedTarget)) || targetingOtherButton) {
+                this.hideTimeout = setTimeout(() => {
+                    this.hidePopup();
+                    this.activeTarget = null;
+                }, 100);
+            }
+        };
+
+        button.addEventListener("mouseenter", handleMouseEnter);
+        button.addEventListener("mouseleave", handleMouseLeave);
+        popupWrapper.addEventListener("mouseenter", () => clearTimeout(this.hideTimeout));
+        popupWrapper.addEventListener("mouseleave", handleMouseLeave);
     }
 
     handleButtonMouseEnter(event, target) {
         this.activeTarget = target;
-        this.updateContent(target);
-        this.showPopup();
-        this.positionPopup(event.target.getBoundingClientRect());
+        const { popup } = this.targetNodes.get(target);
+        this.updateContent(target, popup);
+        
+        requestAnimationFrame(() => {
+            this.showPopup(popup);
+            this.positionPopup(event.target.getBoundingClientRect(), popup);
+        });
     }
 
     handleButtonMouseLeave(event) {
-        if (!this.popupElement.contains(event.relatedTarget)) {
-            this.hidePopup();
-            this.activeTarget = null;
-        }
+        setTimeout(() => {
+            if (!this.popupElement.matches(':hover')) {
+                this.hidePopup();
+                this.activeTarget = null;
+            }
+        }, 50);
     }
-
+    
     handlePopupMouseLeave(event) {
-        if (!this.targetNodes.has(this.activeTarget) || !this.popupElement.contains(event.relatedTarget)) {
+        const button = this.activeTarget?.querySelector('.show-popup-button');
+        if (!button?.matches(':hover')) {
             this.hidePopup();
             this.activeTarget = null;
         }
@@ -62,58 +112,81 @@ class MatchroomPopup {
         }
     }
 
-    positionPopup(buttonRect) {
-        const popupRect = this.popupElement.getBoundingClientRect();
-        const top = buttonRect.bottom + window.scrollY;
-        const left = buttonRect.left + window.scrollX - popupRect.width / 2 + buttonRect.width / 2;
-
-        this.popupElement.style.top = `${top}px`;
-        this.popupElement.style.left = `${Math.max(left, 0)}px`;
+    positionPopup(buttonRect, popup) {
+        const popupRect = popup.getBoundingClientRect();
+        const wrapperRect = popup.parentElement.getBoundingClientRect();
+        
+        // Центрируем попап относительно кнопки
+        const left = -(popupRect.width / 2) + (buttonRect.width / 2);
+        
+        // Проверяем границы экрана
+        const viewportWidth = window.innerWidth;
+        const popupLeft = wrapperRect.left + left;
+        
+        if (popupLeft < 0) {
+            popup.style.left = `${-wrapperRect.left}px`;
+        } else if (popupLeft + popupRect.width > viewportWidth) {
+            popup.style.left = `${viewportWidth - wrapperRect.left - popupRect.width}px`;
+        } else {
+            popup.style.left = `${left}px`;
+        }
+        
+        popup.style.top = '0';
     }
 
-    showPopup() {
-        this.popupElement.style.display = "block";
-        setTimeout(() => {
-            Object.assign(this.popupElement.style, {
+    showPopup(popup) {
+        popup.style.display = "block";
+        
+        requestAnimationFrame(() => {
+            Object.assign(popup.style, {
                 opacity: "1",
                 transform: "translateY(0)",
                 pointerEvents: "auto"
             });
             this.isPopupVisible = true;
-        }, 50);
+        });
     }
 
     hidePopup() {
-        Object.assign(this.popupElement.style, {
+        if (!this.activeTarget) return;
+        const { popup } = this.targetNodes.get(this.activeTarget);
+        
+        Object.assign(popup.style, {
             opacity: "0",
-            transform: "translateY(10px)",
+            transform: "translateY(-5px)",
             pointerEvents: "none"
         });
-
+        
         setTimeout(() => {
-            if (this.popupElement.style.opacity === "0") {
-                this.popupElement.style.display = "none";
+            if (popup.style.opacity === "0") {
+                popup.style.display = "none";
                 this.isPopupVisible = false;
             }
-        }, 300);
+        }, 200);
     }
 
-    updateContent(target) {
-        const matchStats = this.targetNodes.get(target);
+    updateContent(target, popup) {
+        const { stats } = this.targetNodes.get(target);
         const sortByKills = (players) => players.sort((a, b) => b.player_stats["Kills"] - a.player_stats["Kills"]);
 
         const teams = [
-            sortByKills(matchStats.rounds[0].teams[0].players),
-            sortByKills(matchStats.rounds[0].teams[1].players),
+            sortByKills(stats.rounds[0].teams[0].players),
+            sortByKills(stats.rounds[0].teams[1].players),
         ];
 
-        teams.forEach((team, index) => {
-            const table = this.popupElement.querySelector(`#team-table-popup-${index + 1}`);
-            table.innerHTML = "";
+        const tables = [
+            popup.querySelector(`#team-table-popup-1`),
+            popup.querySelector(`#team-table-popup-2`)
+        ];
 
+        // Очищаем таблицы
+        tables.forEach(table => table.innerHTML = "");
+
+        // Заполняем таблицы
+        teams.forEach((team, index) => {
             team.forEach((playerStats) => {
                 const row = document.createElement("tr");
-                row.classList.add("table-row");
+                row.classList.add("popup-table-row");
                 const stats = playerStats["player_stats"];
                 const data = [
                     playerStats.nickname,
@@ -128,17 +201,72 @@ class MatchroomPopup {
                     stats["ADR"],
                 ];
 
-                data.forEach((value, index) => {
+                data.forEach((value, cellIndex) => {
                     const cell = document.createElement("td");
-                    if (index === 0 && this.playerId === playerStats.player_id) {
-                        cell.style.color = "rgb(255, 85, 0)"
+                    if (cellIndex === 0 && this.playerId === playerStats.player_id) {
+                        cell.style.color = "rgb(255, 85, 0)";
                     }
-                    cell.classList.add("table-cell");
+                    cell.classList.add("popup-table-cell");
                     cell.textContent = value;
                     row.appendChild(cell);
                 });
 
-                table.appendChild(row);
+                tables[index].appendChild(row);
+            });
+        });
+
+        requestAnimationFrame(() => {
+            const button = target.querySelector('.show-popup-button');
+            if (!button) {
+                console.error('Button not found');
+                return;
+            }
+            
+            const buttonRect = button.getBoundingClientRect();
+            const [table1, table2] = popup.querySelectorAll('.popup-scoreboard-table');
+            if (!table1 || !table2) {
+                console.error('Tables not found');
+                return;
+            }
+            
+            const table1Height = table1.getBoundingClientRect().height;
+            const table2Height = table2.getBoundingClientRect().height;
+            const totalHeight = table1Height + 5 + table2Height;
+            
+            // Устанавливаем стили для попапа
+            Object.assign(popup.style, {
+                display: 'flex',
+                position: 'absolute',
+                opacity: '0',
+                pointerEvents: 'none',
+                zIndex: '9999'
+            });
+            
+            requestAnimationFrame(() => {
+                const wrapperRect = popup.parentElement.getBoundingClientRect();
+                const buttonCenterY = buttonRect.top - wrapperRect.top + (buttonRect.height / 2);
+                const top = buttonCenterY - (table1Height + 2.5);
+                
+                // Применяем позиционирование
+                Object.assign(popup.style, {
+                    left: '100%',
+                    top: `${top}px`,
+                    opacity: '1',
+                    pointerEvents: 'auto',
+                    marginLeft: '5px'
+                });
+                
+                // Проверяем границы экрана
+                const viewportWidth = window.innerWidth;
+                const popupRect = popup.getBoundingClientRect();
+                
+                if (wrapperRect.right + 5 + popupRect.width > viewportWidth) {
+                    // Если не помещается справа, показываем слева
+                    popup.style.left = 'auto';
+                    popup.style.right = '100%';
+                    popup.style.marginLeft = '0';
+                    popup.style.marginRight = '5px';
+                }
             });
         });
     }

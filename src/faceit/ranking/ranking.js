@@ -49,13 +49,13 @@ function insertAllLevelsToTable(currentLevel) {
     levelIcons.forEach((icon, level) => {
         const node = document.getElementById(`level-node-${level}`);
         const span = node.getElementsByTagName("span")[0];
-        icon.cloneNode(true).appendToAndHide(span)
+        rankingModule.appendToAndHide(icon,span)
         if (level === currentLevel) {
             let svgNode = icon.cloneNode(true)
             let svgSpan = svgNode.getElementsByTagName("span")[0];
             svgSpan.style.width = "36px";
             svgSpan.style.height = "36px";
-            svgNode.appendToAndHide(document.getElementById("current-level").getElementsByTagName("span")[0])
+            rankingModule.appendToAndHide(svgNode,document.getElementById("current-level").getElementsByTagName("span")[0])
         }
     })
 }
@@ -66,8 +66,8 @@ const rankingModule = new Module("ranking", async () => {
 
     doAfterStatisticNodeAppear(async (node) => {
         let newNode = getHtmlResource("src/visual/tables/level-progress-table.html").cloneNode(true)
-        newNode.appendToAndHide(node)
-        newLevelsModule.removalNode(newNode)
+        rankingModule.appendToAndHide(newNode,node)
+        rankingModule.removalNode(newNode)
         await insertAllStatisticToNewTable();
     })
 })

@@ -1,10 +1,5 @@
-const MAX_REQUESTS_PER_SECOND = 20;
-const requestQueue = [];
-let activeRequests = 0;
 const matchIds = [];
 const matchDetailedDatas = new Map();
-const loadingMatches = new Set();
-const nodesToBatch = [];
 const matchNodesByMatchStats = [];
 
 let historyPopup = undefined
@@ -22,10 +17,7 @@ class MatchNodeByMatchStats {
     }
 
     async loadMatchStats(playerId) {
-        if (!matchDetailedDatas.has(this.matchId)) {
-            await processQueue(() => getDetailedMatchData(this.matchId));
-        }
-        const detailedMatchInfo = matchDetailedDatas.get(this.matchId);
+        const detailedMatchInfo = await getDetailedMatchData(this.matchId);
         if (!detailedMatchInfo) return;
         this.detailedMatchInfo = detailedMatchInfo;
         const {player: stats, team} = findPlayerInTeamById(detailedMatchInfo.rounds[0].teams, playerId);
@@ -40,6 +32,8 @@ class MatchNodeByMatchStats {
 
     setupStatsToNode(playerId) {
         if (!this.matchStats) return;
+        let nodeId = `${matchHistoryModule.sessionId}-extended-stats-node-${this.index}`
+        if (document.getElementById(nodeId)) return;
         const {
             "Kills": k,
             "Assists": a,
@@ -56,7 +50,7 @@ class MatchNodeByMatchStats {
         const impact = (parseInt(k, 10) + 0.5 * parseInt(a, 10) - entryImpact * 1.5) / rounds;
 
         const rating = (0.0073 * kast + 0.3591 * parseFloat(kr) - 0.5329 * (parseInt(d, 10) / rounds) + 0.2372 * impact + 0.0032 * parseInt(adr, 10) + 0.1587).toFixed(2);
-        insertStatsIntoNode(this.node, this.score, rating, k, d, kd, kr, adr, this.isWin);
+        insertStatsIntoNode(this.node, this.score, rating, k, d, kd, kr, adr, this.isWin, nodeId);
 
         historyPopup.attachToElement(this.node, this.detailedMatchInfo, playerId)
     }
@@ -64,33 +58,98 @@ class MatchNodeByMatchStats {
     setupMatchCounterArrow() {
         let matchNumber = (this.index + 1)
         if (matchNumber % 20 !== 0) return
+        let arrowId = `arrow-${matchNumber / 20}`
         const arrow = getHtmlResource("src/visual/tables/match-counter-arrow.html").cloneNode(true);
+        arrow.id = arrowId
+        let idCounter = 0
         for (let child of this.node.children) {
+            let borderId = `border-${matchNumber / 20}-${idCounter++}`
+            if (document.getElementById(borderId)) continue
+
             child.style.position = "relative";
             child.style.paddingBottom = "1px";
 
             const borderElement = document.createElement("div");
+            borderElement.id = borderId
             borderElement.style.position = "absolute";
             borderElement.style.bottom = "-1px";
             borderElement.style.left = "0";
             borderElement.style.width = "100%";
             borderElement.style.height = "1px";
             borderElement.style.backgroundColor = "rgb(255, 85, 0)";
-
             child.appendChild(borderElement);
         }
-
-        this.node.insertAdjacentElement("afterend", arrow)
-        arrow.querySelector("[class=square]").innerText = matchNumber
+        if (!document.getElementById(arrowId)) {
+            appendTo(arrow, this.node, 'arrow')
+            arrow.querySelector("[class=square]").innerText = matchNumber
+        }
     }
 }
 
-function insertStatsIntoNode(root, score, rating, k, d, kd, kr, adr, isWin) {
+const matchHistoryModule = new Module("matchhistory", async () => {
+    if (!(await isExtensionEnabled()) || !(await isSettingEnabled("matchhistory"))) return;
+
+
+    await new Promise(resolve => {
+        const maxAttempts = 50;
+        let attempts = 0;
+
+        const checkOtherExtension = () => {
+            const hasEloChanges = document.querySelector('table[matches-elo]') ||
+                Array.from(document.querySelectorAll('span')).some(span =>
+                    span.textContent.includes('(+') || span.textContent.includes('(-')
+                );
+
+            if (hasEloChanges || attempts >= maxAttempts) {
+                resolve();
+            } else {
+                attempts++;
+                setTimeout(checkOtherExtension, 50);
+            }
+        };
+
+        checkOtherExtension();
+    });
+
+    let sessionId = matchHistoryModule.sessionId;
+    let tableRowId = `${sessionId}-table-row-id`;
+    historyPopup = new MatchroomPopup();
+
+    const playerId = (await getPlayerStatsByNickName(extractPlayerNick())).player_id;
+    matchHistoryModule.playerId = playerId;
+    await loadAllPlayerMatches(playerId);
+    let ended = false;
+
+    let lastIndex = -1
+
+    await matchHistoryModule.doAfterAllNodeAppearPack(`tr[class*='styles__MatchHistoryTableRow']:not([id*='${tableRowId}'])`, async (nodes) => {
+        if (ended) return;
+        let batch = []
+        for (let node of nodes) {
+            const index = lastIndex === -1 ? (Array.from(node.parentNode.children).filter(child => child.tagName === 'TR').indexOf(node) - 1) : lastIndex;
+            if (node.id === `${tableRowId}-${index}`) continue;
+            node.id = `${tableRowId}-${index}`;
+            if (index === 299) ended = true;
+            if (index === -1) continue;
+            if (index > 299) return;
+            lastIndex = index + 1;
+            batch.push(new MatchNodeByMatchStats(node, matchIds[index], index));
+        }
+        await Promise.all(batch.map(node => node.loadMatchStats(playerId)));
+    });
+}, async () => {
+    matchNodesByMatchStats.length = 0;
+    matchIds.length = 0;
+});
+
+function insertStatsIntoNode(root, score, rating, k, d, kd, kr, adr, isWin, id) {
     const tableTemplate = getHtmlResource("src/visual/tables/matchscore.html").cloneNode(true);
+    tableTemplate.id = id
     const fourthNode = root?.children[3];
+    if (!fourthNode) return
     matchHistoryModule.removalNode(tableTemplate);
     insertRow(tableTemplate, score, rating, k, d, kd, kr, adr, isWin);
-    tableTemplate.appendToAndHide(fourthNode.querySelector("span"));
+    matchHistoryModule.appendToAndHide(tableTemplate, fourthNode.querySelector("span"), 'table-template')
 }
 
 function insertRow(node, score, rating, k, d, kd, kr, adr, isWin) {
@@ -130,76 +189,30 @@ function insertRow(node, score, rating, k, d, kd, kr, adr, isWin) {
         text: "/",
         isSlash: true
     }, {text: kr, condition: kr >= 0.65}]));
-    newRow.insertCell(4).appendChild(createColoredDiv(adr, adr >= 65));
+    newRow.insertCell(4).appendChild(createColoredDiv(adr, adr >= 75));
 }
-
-const matchHistoryModule = new Module("matchhistory", async () => {
-    if (!(await isExtensionEnabled()) || !(await isSettingEnabled("matchhistory"))) return;
-    historyPopup = new MatchroomPopup()
-    const playerId = (await getPlayerStatsByNickName(extractPlayerNick())).player_id;
-    matchHistoryModule.playerId = playerId;
-    await loadAllPlayerMatches(playerId);
-
-    let ended = false;
-    await matchHistoryModule.doAfterAllNodeAppearPack("tr[class*='styles__MatchHistoryTableRow']:not([id*='table-row-id'])", async (nodes) => {
-        if (ended) return;
-        for (let node of nodes) {
-            const index = Array.from(node.parentNode.children).filter(child => child.tagName === 'TR').indexOf(node) - 1;
-            if (node.id === `table-row-id-${index}`) continue;
-            node.id = `table-row-id-${index}`;
-            if (index === 299) ended = true;
-            if (index === -1) continue;
-            nodesToBatch.push(new MatchNodeByMatchStats(node, matchIds[index], index));
-        }
-    });
-
-    matchHistoryModule.every(500, async () => {
-        const batch = [...nodesToBatch];
-        nodesToBatch.length = 0;
-        await Promise.all(batch.map(matchNode => processQueue(() => matchNode.loadMatchStats(playerId))));
-    });
-}, async () => {
-    matchNodesByMatchStats.forEach(data => data.node.remove());
-    matchNodesByMatchStats.length = 0;
-    matchIds.length = 0;
-});
 
 async function getDetailedMatchData(matchId) {
     if (matchDetailedDatas.has(matchId)) return matchDetailedDatas.get(matchId);
-    if (loadingMatches.has(matchId)) return;
-
-    loadingMatches.add(matchId);
-    try {
-        const data = await fetchMatchStatsDetailed(matchId);
-        matchDetailedDatas.set(matchId, data);
-    } catch (error) {
-        console.error(error);
-    } finally {
-        loadingMatches.delete(matchId);
-    }
-    return matchDetailedDatas.get(matchId);
-}
-
-function processQueue(requestFn) {
-    return new Promise(resolve => {
-        if (activeRequests >= MAX_REQUESTS_PER_SECOND) {
-            requestQueue.push(() => requestFn?.().then(resolve));
-        } else {
-            activeRequests++;
-            requestFn?.().then(resolve).finally(() => {
-                activeRequests--;
-                if (requestQueue.length) {
-                    let nextRequest = requestQueue.shift();
-                    setTimeout(() => processQueue(nextRequest), 1000 / MAX_REQUESTS_PER_SECOND);
-                }
-            });
-        }
-    });
+    let matchData = await getFromCacheOrFetch(matchId, fetchMatchStatsDetailed);
+    matchDetailedDatas.set(matchId, matchData);
+    return matchData;
 }
 
 async function loadAllPlayerMatches(playerId) {
     const results = await Promise.all([0, 100, 200].map(from => loadPlayerMatches(playerId, from)));
-    results.flat().forEach(id => matchIds.push(id));
+    const allMatchIds = results.flat();
+    
+    const matchDataPromises = allMatchIds.map(matchId => 
+        getDetailedMatchData(matchId).catch(err => {
+            console.error(`Failed to load match ${matchId}:`, err);
+            return null;
+        })
+    );
+    
+    await Promise.all(matchDataPromises);
+    
+    allMatchIds.forEach(id => matchIds.push(id));
 }
 
 async function loadPlayerMatches(playerId, from) {

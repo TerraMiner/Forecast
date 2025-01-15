@@ -18,14 +18,40 @@ function hideNode(node) {
     node.setAttribute("hided", "true");
 }
 
-Element.prototype.appendTo = function (node) {
-    node.insertAdjacentElement('afterend', this);
-};
+function hideWithCSS(selector) {
+    let style = document.getElementById("hideStyleElement");
+    if (!style) {
+        style = document.createElement('style');
+        style.id = "hideStyleElement";
+        document.documentElement.appendChild(style);
+    }
 
-Element.prototype.appendToAndHide = function (node) {
-    this.appendTo(node);
-    hideNode(node);
-};
+    const sheet = style.sheet;
+    const rules = Array.from(sheet.cssRules || []);
+    const existingRule = rules.find(rule => rule.selectorText === selector);
+
+    if (!existingRule) {
+        sheet.insertRule(`${selector} { display: none; }`, sheet.cssRules.length);
+    }
+}
+
+function appendTo(sourceNode,targetNode) {
+    targetNode.insertAdjacentElement('afterend', sourceNode);
+}
+
+function appendToAndHide(sourceNode,hiddenNode) {
+    appendTo(sourceNode,hiddenNode);
+    hideNode(hiddenNode);
+}
+
+function preppendTo(sourceNode,targetNode) {
+    targetNode.insertAdjacentElement('afterbegin', sourceNode);
+}
+
+function preppendToAndHide(sourceNode,hiddenNode) {
+    preppendTo(sourceNode,hiddenNode);
+    hideNode(hiddenNode);
+}
 
 async function getSliderValue() {
     return new Promise((resolve, reject) => {
