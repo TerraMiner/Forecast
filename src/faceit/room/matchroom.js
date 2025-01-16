@@ -4,7 +4,7 @@ const matchRoomModule = new Module("matchroom", async () => {
 
     const matchId = extractMatchId();
 
-    const calculator = new TeamWinRateCalculator();
+    const calculator = new TeamWinRateCalculator(matchRoomModule.sessionId);
 
     try {
         if (!matchId) return;
@@ -15,15 +15,16 @@ const matchRoomModule = new Module("matchroom", async () => {
 })
 
 class TeamWinRateCalculator {
-    constructor() {
+    constructor(sessionId) {
         this.results = new Map();
+        this.sessionId = sessionId;
     }
 
     insertHtmlToPlayerCard(filePath, playerId, targetNode) {
         let htmlResource = getHtmlResource(filePath).cloneNode(true);
         targetNode.insertAdjacentElement('beforeend', htmlResource);
         let table = document.getElementById("player-table")
-        table.id = `player-table-${playerId}`
+        table.id = `${this.sessionId}-player-table-${playerId}`
         table.closest(`[class*="UserCardPopup__UserCardContainer"]`).style.minHeight = "530px"
     }
 
@@ -68,7 +69,7 @@ class TeamWinRateCalculator {
                 (winsB / totalB) - (winsA / totalA))
             .forEach(([mapName, {totalGames, wins}]) => {
                 const winrate = ((wins / totalGames) * 100).toFixed(0);
-                addRow(`player-table-${playerId}`, mapName, totalGames, winrate);
+                addRow(`${this.sessionId}-player-table-${playerId}`, mapName, totalGames, winrate);
             });
     }
 
@@ -150,7 +151,7 @@ class TeamWinRateCalculator {
         });
 
         await this.findUserCard(playerId, userCardElement => {
-            const existingTable = document.getElementById(`player-table-${playerId}`)
+            const existingTable = document.getElementById(`${this.sessionId}-player-table-${playerId}`)
             if (!existingTable) {
                 this.insertHtmlToPlayerCard('src/visual/tables/player.html', playerId, userCardElement);
 
@@ -175,10 +176,13 @@ class TeamWinRateCalculator {
         );
 
         await Promise.all([...team1Promises, ...team2Promises]);
-
+        let teamTableNodeId = `${this.sessionId}-team-table`
         await matchRoomModule.doAfterNodeAppear('[name="info"][class*="Overview__Column"]',async (node) => {
-            let uniqueCheck = () => node.querySelector('[id*="team-table"]')
-            if (uniqueCheck()) return
+            let existingTeamTableNode = node.querySelector(`[id*="team-table"]`);
+            if (existingTeamTableNode) {
+                if (existingTeamTableNode.id === teamTableNodeId) return
+                else existingTeamTableNode.remove()
+            }
             const targetNode = node.matches('[name="info"]') ? node : node.querySelector('[name="info"][class*="Overview__Column"]');
             if (!targetNode) return false;
             if (targetNode.hasAttribute('data-processed')) return false;
@@ -186,14 +190,13 @@ class TeamWinRateCalculator {
 
             let innerNode = targetNode.querySelector('[class*="Overview__Stack"]')
             let htmlResource = getHtmlResource('src/visual/tables/team.html').cloneNode(true)
-            htmlResource.id = "team-table"
+            htmlResource.id = teamTableNodeId
             if (browserType === CHROMIUM) {
                 let styleElement = htmlResource.querySelector('style');
                 let currentStyles = styleElement.innerHTML;
                 styleElement.innerHTML = currentStyles.replace('padding: 5px 3px;', 'padding: 10px;');
             }
             innerNode.insertAdjacentElement('afterend', htmlResource);
-            matchRoomModule.removalNode(htmlResource);
 
             this.results.forEach((teamMap, teamName) => {
                 const teamMatches = this.aggregateTeamMatches(teamMap);

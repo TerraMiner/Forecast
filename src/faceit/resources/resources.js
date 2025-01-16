@@ -56,13 +56,13 @@ async function getHTMLCodeFromFile(filePath) {
     } else if (browserType === CHROMIUM) {
         url = chrome.runtime.getURL(filePath);
     } else {
-        console.error("Unable to determine runtime environment.");
+        error("Unable to determine runtime environment.");
         return null;
     }
 
     const response = await fetch(url);
     if (!response.ok) {
-        console.error(`HTTP error! Status: ${response.status}`);
+        error(`HTTP error! Status: ${response.status}`);
         return null;
     }
 

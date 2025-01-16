@@ -1,10 +1,10 @@
 let previousUrl = "";
 
 const regexModules = [
-    {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats(\/.*)?$/, module: matchHistoryModule},
     {regex: /^https:\/\/www\.faceit\.com\/.*$/, module: newLevelsModule},
+    {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats(\/.*)?$/, module: rankingModule},
     {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/cs2\/room\/[0-9a-zA-Z\-]+(\/.*)?$/, module: matchRoomModule},
-    {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats(\/.*)?$/, module: rankingModule}
+    {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats(\/.*)?$/, module: matchHistoryModule}
 ]
 
 resourcesModule.produceOf("load").then(async () => {

@@ -25,12 +25,8 @@ function hideWithCSS(selector) {
         style.id = "hideStyleElement";
         document.documentElement.appendChild(style);
     }
-
     const sheet = style.sheet;
-    const rules = Array.from(sheet.cssRules || []);
-    const existingRule = rules.find(rule => rule.selectorText === selector);
-
-    if (!existingRule) {
+    if (!Array.from(sheet.cssRules || []).find(rule => rule.selectorText === selector)) {
         sheet.insertRule(`${selector} { display: none; }`, sheet.cssRules.length);
     }
 }
@@ -51,6 +47,21 @@ function preppendTo(sourceNode,targetNode) {
 function preppendToAndHide(sourceNode,hiddenNode) {
     preppendTo(sourceNode,hiddenNode);
     hideNode(hiddenNode);
+}
+
+function replaceOrInsertCell(row, index, contentCreator) {
+    let cell = row.cells[index];  // Получаем ячейку по индексу
+
+    if (!cell) {
+        // Если ячейки нет, создаем новую
+        cell = row.insertCell(index);
+    } else {
+        // Если ячейка есть, очищаем её перед добавлением нового содержимого
+        cell.innerHTML = '';
+    }
+
+    // Добавляем контент в ячейку
+    cell.appendChild(contentCreator());
 }
 
 async function getSliderValue() {

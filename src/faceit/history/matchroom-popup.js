@@ -2,7 +2,7 @@ class MatchroomPopup {
     constructor() {
         this.popupElement = getHtmlResource("src/visual/tables/hover-popup-matchroom.html").cloneNode(true);
         this.popupElement.classList.add('popup-tooltip');
-        
+
         Object.assign(this.popupElement.style, {
             display: "none",
             position: "fixed",
@@ -26,9 +26,9 @@ class MatchroomPopup {
 
         const popupClone = this.popupElement.cloneNode(true);
         popupClone.classList.add('popup-tooltip');
-        
+
         const popupContainer = element.querySelector('.show-popup-button-wrap');
-        
+
         const popupWrapper = document.createElement('div');
         Object.assign(popupWrapper.style, {
             position: 'relative',
@@ -45,10 +45,8 @@ class MatchroomPopup {
         });
 
         const button = element.querySelector('.show-popup-button');
-        
-        // Обработка событий мыши
+
         const handleMouseEnter = (event) => {
-            // Если есть активный попап и это другой элемент, скрываем его
             if (this.activeTarget && this.activeTarget !== element) {
                 this.hidePopup();
             }
@@ -59,10 +57,9 @@ class MatchroomPopup {
         const handleMouseLeave = (event) => {
             const { popup, wrapper } = this.targetNodes.get(element);
             const relatedTarget = event.relatedTarget;
-            
-            // Проверяем, не наводимся ли мы на другую кнопку
+
             const targetingOtherButton = relatedTarget && relatedTarget.closest('.show-popup-button');
-            
+
             if ((!popup.contains(relatedTarget) && !wrapper.contains(relatedTarget)) || targetingOtherButton) {
                 this.hideTimeout = setTimeout(() => {
                     this.hidePopup();
@@ -81,7 +78,7 @@ class MatchroomPopup {
         this.activeTarget = target;
         const { popup } = this.targetNodes.get(target);
         this.updateContent(target, popup);
-        
+
         requestAnimationFrame(() => {
             this.showPopup(popup);
             this.positionPopup(event.target.getBoundingClientRect(), popup);
@@ -96,7 +93,7 @@ class MatchroomPopup {
             }
         }, 50);
     }
-    
+
     handlePopupMouseLeave(event) {
         const button = this.activeTarget?.querySelector('.show-popup-button');
         if (!button?.matches(':hover')) {
@@ -115,14 +112,12 @@ class MatchroomPopup {
     positionPopup(buttonRect, popup) {
         const popupRect = popup.getBoundingClientRect();
         const wrapperRect = popup.parentElement.getBoundingClientRect();
-        
-        // Центрируем попап относительно кнопки
+
         const left = -(popupRect.width / 2) + (buttonRect.width / 2);
-        
-        // Проверяем границы экрана
+
         const viewportWidth = window.innerWidth;
         const popupLeft = wrapperRect.left + left;
-        
+
         if (popupLeft < 0) {
             popup.style.left = `${-wrapperRect.left}px`;
         } else if (popupLeft + popupRect.width > viewportWidth) {
@@ -130,13 +125,13 @@ class MatchroomPopup {
         } else {
             popup.style.left = `${left}px`;
         }
-        
+
         popup.style.top = '0';
     }
 
     showPopup(popup) {
         popup.style.display = "block";
-        
+
         requestAnimationFrame(() => {
             Object.assign(popup.style, {
                 opacity: "1",
@@ -150,13 +145,13 @@ class MatchroomPopup {
     hidePopup() {
         if (!this.activeTarget) return;
         const { popup } = this.targetNodes.get(this.activeTarget);
-        
+
         Object.assign(popup.style, {
             opacity: "0",
             transform: "translateY(-5px)",
             pointerEvents: "none"
         });
-        
+
         setTimeout(() => {
             if (popup.style.opacity === "0") {
                 popup.style.display = "none";
@@ -179,10 +174,8 @@ class MatchroomPopup {
             popup.querySelector(`#team-table-popup-2`)
         ];
 
-        // Очищаем таблицы
         tables.forEach(table => table.innerHTML = "");
 
-        // Заполняем таблицы
         teams.forEach((team, index) => {
             team.forEach((playerStats) => {
                 const row = document.createElement("tr");
@@ -198,7 +191,7 @@ class MatchroomPopup {
                     stats["Headshots"],
                     stats["Headshots %"],
                     stats["MVPs"],
-                    stats["ADR"],
+                    stats["ADR"]
                 ];
 
                 data.forEach((value, cellIndex) => {
@@ -218,22 +211,19 @@ class MatchroomPopup {
         requestAnimationFrame(() => {
             const button = target.querySelector('.show-popup-button');
             if (!button) {
-                console.error('Button not found');
+                error('Button not found');
                 return;
             }
-            
+
             const buttonRect = button.getBoundingClientRect();
             const [table1, table2] = popup.querySelectorAll('.popup-scoreboard-table');
             if (!table1 || !table2) {
-                console.error('Tables not found');
+                error('Tables not found');
                 return;
             }
-            
+
             const table1Height = table1.getBoundingClientRect().height;
-            const table2Height = table2.getBoundingClientRect().height;
-            const totalHeight = table1Height + 5 + table2Height;
-            
-            // Устанавливаем стили для попапа
+
             Object.assign(popup.style, {
                 display: 'flex',
                 position: 'absolute',
@@ -241,13 +231,12 @@ class MatchroomPopup {
                 pointerEvents: 'none',
                 zIndex: '9999'
             });
-            
+
             requestAnimationFrame(() => {
                 const wrapperRect = popup.parentElement.getBoundingClientRect();
                 const buttonCenterY = buttonRect.top - wrapperRect.top + (buttonRect.height / 2);
                 const top = buttonCenterY - (table1Height + 2.5);
-                
-                // Применяем позиционирование
+
                 Object.assign(popup.style, {
                     left: '100%',
                     top: `${top}px`,
@@ -255,18 +244,6 @@ class MatchroomPopup {
                     pointerEvents: 'auto',
                     marginLeft: '5px'
                 });
-                
-                // Проверяем границы экрана
-                const viewportWidth = window.innerWidth;
-                const popupRect = popup.getBoundingClientRect();
-                
-                if (wrapperRect.right + 5 + popupRect.width > viewportWidth) {
-                    // Если не помещается справа, показываем слева
-                    popup.style.left = 'auto';
-                    popup.style.right = '100%';
-                    popup.style.marginLeft = '0';
-                    popup.style.marginRight = '5px';
-                }
             });
         });
     }

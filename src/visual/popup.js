@@ -36,14 +36,14 @@ async function popupLoad() {
         if (toggleExtension) {
             toggleExtension.checked = enabled;
         } else {
-            console.error("Toggle switch not found!");
+            error("Toggle switch not found!");
         }
 
         if (!enabled) {
             document.getElementById("matchStats").innerText = "The extension is disabled!";
         }
     } catch (error) {
-        console.error("Error loading settings:", error);
+        error("Error loading settings:", error);
     }
 }
 
@@ -79,7 +79,7 @@ async function loadSettings() {
             sliderValueDisplay.textContent = sliderValue;
         }
     } catch (error) {
-        console.error("Error loading settings:", error);
+        error("Error loading settings:", error);
     }
 }
 
@@ -93,7 +93,7 @@ async function saveSettings() {
     try {
         await setStorage({isEnabled, sliderValue, matchroom, eloranking, matchhistory});
     } catch (error) {
-        console.error("Error saving settings:", error);
+        error("Error saving settings:", error);
     }
 }
 
@@ -171,6 +171,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
     } catch (error) {
-        console.error("Error during DOMContentLoaded:", error);
+        error("Error during DOMContentLoaded:", error);
     }
 });

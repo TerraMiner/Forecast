@@ -80,7 +80,6 @@ class Module {
         node.setAttribute('data-processed', '')
     }
 
-    //todo Уйти полностью с логики Removal Nodes и перейти на логику USID - Unique Session ID, использовать аналогично matchhistory.js - 125
     removalNode(node) {
         this.nodesToRemove.push(node)
     }

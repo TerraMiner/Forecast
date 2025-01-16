@@ -13,27 +13,32 @@ class MatchNodeByMatchStats {
         this.score = "";
         this.isWin = false;
         this.index = index
+        this.nodeId = `${matchHistoryModule.sessionId}-extended-stats-node-${index}`
         this.setupMatchCounterArrow()
     }
 
     async loadMatchStats(playerId) {
         const detailedMatchInfo = await getDetailedMatchData(this.matchId);
-        if (!detailedMatchInfo) return;
         this.detailedMatchInfo = detailedMatchInfo;
-        const {player: stats, team} = findPlayerInTeamById(detailedMatchInfo.rounds[0].teams, playerId);
-        this.matchStats = stats?.["player_stats"];
+        if (!detailedMatchInfo) {
+            error(`No detailed match info found for matchId: ${this.matchId}`);
+            return;
+        }
 
+        const {player: stats, team} = findPlayerInTeamById(detailedMatchInfo.rounds[0].teams, playerId);
+        if (!stats) {
+            error(`No stats found for playerId: ${playerId} in matchId: ${this.matchId}`);
+            return;
+        }
+
+        this.matchStats = stats["player_stats"];
         this.rounds = parseInt(detailedMatchInfo.rounds[0].round_stats["Rounds"], 10);
         this.score = detailedMatchInfo.rounds[0].round_stats["Score"].replace(/\s+/g, '');
         this.isWin = team["team_stats"]["Team Win"] === "1";
-
-        this.setupStatsToNode(playerId);
     }
 
     setupStatsToNode(playerId) {
         if (!this.matchStats) return;
-        let nodeId = `${matchHistoryModule.sessionId}-extended-stats-node-${this.index}`
-        if (document.getElementById(nodeId)) return;
         const {
             "Kills": k,
             "Assists": a,
@@ -50,9 +55,14 @@ class MatchNodeByMatchStats {
         const impact = (parseInt(k, 10) + 0.5 * parseInt(a, 10) - entryImpact * 1.5) / rounds;
 
         const rating = (0.0073 * kast + 0.3591 * parseFloat(kr) - 0.5329 * (parseInt(d, 10) / rounds) + 0.2372 * impact + 0.0032 * parseInt(adr, 10) + 0.1587).toFixed(2);
-        insertStatsIntoNode(this.node, this.score, rating, k, d, kd, kr, adr, this.isWin, nodeId);
+        insertStatsIntoNode(this.node, this.score, rating, k, d, kd, kr, adr, this.isWin, this.nodeId);
 
         historyPopup.attachToElement(this.node, this.detailedMatchInfo, playerId)
+    }
+
+    setupEmptyNode() {
+        if (document.getElementById(this.nodeId)) return;
+        insertStatsIntoNode(this.node, this.score, null, null, null, null, null, null, this.isWin, this.nodeId);
     }
 
     setupMatchCounterArrow() {
@@ -121,6 +131,7 @@ const matchHistoryModule = new Module("matchhistory", async () => {
     let ended = false;
 
     let lastIndex = -1
+    let lastBatchIndex = 0
 
     await matchHistoryModule.doAfterAllNodeAppearPack(`tr[class*='styles__MatchHistoryTableRow']:not([id*='${tableRowId}'])`, async (nodes) => {
         if (ended) return;
@@ -133,9 +144,16 @@ const matchHistoryModule = new Module("matchhistory", async () => {
             if (index === -1) continue;
             if (index > 299) return;
             lastIndex = index + 1;
-            batch.push(new MatchNodeByMatchStats(node, matchIds[index], index));
+            let matchNodeByMatchStats = new MatchNodeByMatchStats(node, matchIds[index], index);
+            matchNodeByMatchStats.setupEmptyNode();
+            batch.push(matchNodeByMatchStats);
+        }
+        if (lastIndex / 30 !== lastBatchIndex) {
+            await loadNextBatchIfNeeded(lastBatchIndex * 30);
+            lastBatchIndex = lastIndex / 30;
         }
         await Promise.all(batch.map(node => node.loadMatchStats(playerId)));
+        batch.forEach(node => node.setupStatsToNode())
     });
 }, async () => {
     matchNodesByMatchStats.length = 0;
@@ -143,25 +161,35 @@ const matchHistoryModule = new Module("matchhistory", async () => {
 });
 
 function insertStatsIntoNode(root, score, rating, k, d, kd, kr, adr, isWin, id) {
-    const tableTemplate = getHtmlResource("src/visual/tables/matchscore.html").cloneNode(true);
-    tableTemplate.id = id
     const fourthNode = root?.children[3];
     if (!fourthNode) return
-    matchHistoryModule.removalNode(tableTemplate);
+
+    let tableTemplate = document.getElementById(id);
+    let tableNotExist = !tableTemplate;
+
+    if (tableNotExist) {
+        tableTemplate = getHtmlResource("src/visual/tables/matchscore.html").cloneNode(true)
+        tableTemplate.id = id
+        matchHistoryModule.removalNode(tableTemplate);
+    }
+
     insertRow(tableTemplate, score, rating, k, d, kd, kr, adr, isWin);
-    matchHistoryModule.appendToAndHide(tableTemplate, fourthNode.querySelector("span"), 'table-template')
+
+    if (tableNotExist) {
+        matchHistoryModule.appendToAndHide(tableTemplate, fourthNode.querySelector("span"), 'table-template')
+    }
 }
 
 function insertRow(node, score, rating, k, d, kd, kr, adr, isWin) {
     const table = node.querySelector('tbody');
-    const newRow = table.insertRow();
+    const tableRow = table.rows.length > 0 ? table.rows[0] : table.insertRow();
     const green = "rgb(61,255,108)", red = "rgb(255, 0, 43)", white = "rgb(255, 255, 255)";
 
     const createColoredDiv = (text, condition, isSlash = false) => {
         const div = document.createElement("span");
-        div.style.color = isSlash ? white : (condition ? green : red);
+        div.style.color = isSlash || !text ? white : (condition ? green : red);
         if (condition) div.style.fontWeight = "bold";
-        div.innerHTML = text;
+        div.innerHTML = text ? text : "-";
         return div;
     };
 
@@ -176,20 +204,28 @@ function insertRow(node, score, rating, k, d, kd, kr, adr, isWin) {
     };
 
     let [scorePart1, scorePart2] = score.split("/");
-    newRow.insertCell(0).appendChild(createCompositeCell([{text: scorePart1, condition: isWin}, {
-        text: "/",
-        isSlash: true
-    }, {text: scorePart2, condition: isWin}]));
-    newRow.insertCell(1).appendChild(createColoredDiv(rating, rating >= 1.0));
-    newRow.insertCell(2).appendChild(createCompositeCell([{text: k, condition: kd >= 1.0}, {
-        text: "/",
-        isSlash: true
-    }, {text: d, condition: kd >= 1.0}]));
-    newRow.insertCell(3).appendChild(createCompositeCell([{text: kd, condition: kd >= 1.0}, {
-        text: "/",
-        isSlash: true
-    }, {text: kr, condition: kr >= 0.65}]));
-    newRow.insertCell(4).appendChild(createColoredDiv(adr, adr >= 75));
+
+    replaceOrInsertCell(tableRow, 0, () => createCompositeCell([
+        { text: scorePart1, condition: isWin },
+        { text: "/", isSlash: true },
+        { text: scorePart2, condition: isWin }
+    ]));
+
+    replaceOrInsertCell(tableRow, 1, () => createColoredDiv(isNaN(rating) ? null : rating, rating >= 1.0));
+
+    replaceOrInsertCell(tableRow, 2, () => createCompositeCell([
+        { text: k, condition: kd >= 1.0 },
+        { text: "/", isSlash: true },
+        { text: d, condition: kd >= 1.0 }
+    ]));
+
+    replaceOrInsertCell(tableRow, 3, () => createCompositeCell([
+        { text: kd, condition: kd >= 1.0 },
+        { text: "/", isSlash: true },
+        { text: kr, condition: kr >= 0.65 }
+    ]));
+
+    replaceOrInsertCell(tableRow, 4, () => createColoredDiv(adr, adr >= 75));
 }
 
 async function getDetailedMatchData(matchId) {
@@ -200,23 +236,14 @@ async function getDetailedMatchData(matchId) {
 }
 
 async function loadAllPlayerMatches(playerId) {
+    await loadMatchHistoryCache();
     const results = await Promise.all([0, 100, 200].map(from => loadPlayerMatches(playerId, from)));
     const allMatchIds = results.flat();
-    
-    const matchDataPromises = allMatchIds.map(matchId => 
-        getDetailedMatchData(matchId).catch(err => {
-            console.error(`Failed to load match ${matchId}:`, err);
-            return null;
-        })
-    );
-    
-    await Promise.all(matchDataPromises);
-    
     allMatchIds.forEach(id => matchIds.push(id));
 }
 
-async function loadPlayerMatches(playerId, from) {
-    const playerGameDatas = await getPlayerGameStats(playerId, extractGameType(), 100, from);
+async function loadPlayerMatches(playerId, from, limit = 100) {
+    const playerGameDatas = await getPlayerGameStats(playerId, extractGameType(), limit, from);
     return playerGameDatas.items.map(item => item.stats["Match Id"]);
 }
 
@@ -226,4 +253,39 @@ function findPlayerInTeamById(teams, playerId) {
         if (player) return {team, player};
     }
     return {};
+}
+
+async function loadNextBatchIfNeeded(currentIndex) {
+    const batchSize = 30;
+    const preloadThreshold = 5;
+
+    const neededBatch = Math.floor(currentIndex / batchSize);
+    const currentLoadedBatch = Math.floor(matchDetailedDatas.size / batchSize);
+
+    const batchStart = currentLoadedBatch * batchSize;
+    const batchEnd = Math.min(batchStart + batchSize, matchIds.length);
+
+    const isAlreadyLoading = matchIds
+        .slice(batchStart, batchEnd)
+        .some(matchId => matchDetailedDatas.has(matchId) || matchDetailedDatas.get(matchId) === null);
+    let batch = []
+    if (currentIndex % batchSize >= (batchSize - preloadThreshold) &&
+        neededBatch >= currentLoadedBatch &&
+        currentIndex < 300 &&
+        !isAlreadyLoading) {
+
+        for (let i = batchStart; i < batchEnd; i++) {
+            const matchId = matchIds[i];
+            if (!matchDetailedDatas.has(matchId)) {
+                matchDetailedDatas.set(matchId, null);
+
+                batch.push(getDetailedMatchData(matchId)
+                    .catch(err => {
+                        error(`Error preloading match data for ${matchId}:`, err);
+                        matchDetailedDatas.delete(matchId);
+                    }));
+            }
+        }
+    }
+    await Promise.all(batch);
 }

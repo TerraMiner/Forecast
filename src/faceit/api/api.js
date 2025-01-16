@@ -100,7 +100,9 @@ function extractPlayerNick() {
 
 function extractGameType() {
     const match = window.location.href.match(/stats\/([a-zA-Z0-9-_]+)/);
-    return match ? match[1] : null;
+    if (match) return match[1];
+    const fallbackMatch = window.location.href.match(/\/[a-z]{2}\/([a-zA-Z0-9-_]+)/);
+    return fallbackMatch ? fallbackMatch[1] : null;
 }
 
 function extractMatchId() {
