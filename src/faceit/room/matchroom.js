@@ -89,26 +89,15 @@ class TeamWinRateCalculator {
     }
 
     async findUserCard(playerId, callback) {
-        const player = await getPlayerStatsById(playerId);
+        const player = await fetchPlayerStatsById(playerId);
         const currentCountry = extractLanguage();
         const match = player.faceit_url.match(/\/players\/[^/]+/);
         const playerLink = "/" + currentCountry + match[0];
 
-        function isUniqueNode(node) {
-            const playerAnchor = node.querySelector(`a[href="${playerLink}"]`);
-            const isProcessed = node.hasAttribute('data-processed');
-            return playerAnchor && !isProcessed;
-        }
-
-        matchRoomModule.observe(function search(node) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                if (node.matches('[class*="UserCard__Container"]') || node.querySelector('[class*="UserCard__Container"]')) {
-                    const targetNode = node.matches('[class*="UserCard__Container"]') ? node : node.querySelector('[class*="UserCard__Container"]');
-                    if (isUniqueNode(targetNode)) {
-                        matchRoomModule.processedNode(targetNode);
-                        callback(targetNode);
-                    }
-                }
+        matchRoomModule.doAfterNodeAppear(`[class*="UserCard__Container"]:has(a[href="${playerLink}"])`, (node) => {
+            if (!node.hasAttribute('data-processed')) {
+                matchRoomModule.processedNode(node);
+                callback(node);
             }
         })
     }
@@ -116,7 +105,7 @@ class TeamWinRateCalculator {
 
     async calculateStats(team, playerId) {
         const matchAmount = await getSliderValue();
-        let data = await getPlayerGameStats(playerId, "cs2", matchAmount);
+        let data = await fetchPlayerInGameStats(playerId, "cs2", matchAmount);
 
         if (!data.items || data.items.length === 0) {
             return;
@@ -190,12 +179,8 @@ class TeamWinRateCalculator {
 
             let innerNode = targetNode.querySelector('[class*="Overview__Stack"]')
             let htmlResource = getHtmlResource('src/visual/tables/team.html').cloneNode(true)
+            node.style.overflowBlock = 'unset';
             htmlResource.id = teamTableNodeId
-            if (browserType === CHROMIUM) {
-                let styleElement = htmlResource.querySelector('style');
-                let currentStyles = styleElement.innerHTML;
-                styleElement.innerHTML = currentStyles.replace('padding: 5px 3px;', 'padding: 10px;');
-            }
             innerNode.insertAdjacentElement('afterend', htmlResource);
 
             this.results.forEach((teamMap, teamName) => {

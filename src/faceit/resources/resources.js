@@ -8,12 +8,14 @@ const resourcesModule = new Module("resources", async () => {
     if (isResourcesLoaded) return
     await loadAllHTMLs();
     await loadLevelIcons();
+    setupStyles();
     isResourcesLoaded = true
 })
 
 async function loadAllHTMLs() {
     const promises = [];
     const urls = [
+        "src/visual/tables/forecaststyles.css",
         "src/visual/tables/level-progress-table.html",
         "src/visual/tables/team.html",
         "src/visual/tables/player.html",
@@ -21,7 +23,6 @@ async function loadAllHTMLs() {
         "src/visual/tables/matchscore.html",
         "src/visual/tables/elo-progress-bar.html",
         "src/visual/tables/elo-progress-bar-master.html",
-        "src/visual/tables/hover-popup-matchroom.html",
         ...Array.from({length: 20}, (_, i) => `src/visual/tables/levels/level${i + 1}.html`)
     ];
 
@@ -38,6 +39,17 @@ async function loadAllHTMLs() {
 
 function getHtmlResource(path) {
     return htmls.get(path)
+}
+
+function setupStyles() {
+    let css = getHtmlResource("src/visual/tables/forecaststyles.css")
+    let style = document.getElementById("forecast-styles");
+    if (!style) {
+        style = document.createElement('style');
+        style.id = "forecast-styles";
+        document.head.appendChild(style);
+    }
+    style.innerHTML = css.innerHTML;
 }
 
 async function loadLevelIcons() {

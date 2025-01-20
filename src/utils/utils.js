@@ -23,7 +23,7 @@ function hideWithCSS(selector) {
     if (!style) {
         style = document.createElement('style');
         style.id = "hideStyleElement";
-        document.documentElement.appendChild(style);
+        document.head.appendChild(style);
     }
     const sheet = style.sheet;
     if (!Array.from(sheet.cssRules || []).find(rule => rule.selectorText === selector)) {
@@ -50,18 +50,28 @@ function preppendToAndHide(sourceNode,hiddenNode) {
 }
 
 function replaceOrInsertCell(row, index, contentCreator) {
-    let cell = row.cells[index];  // Получаем ячейку по индексу
+    let cell = row.cells[index];
 
     if (!cell) {
-        // Если ячейки нет, создаем новую
         cell = row.insertCell(index);
     } else {
-        // Если ячейка есть, очищаем её перед добавлением нового содержимого
         cell.innerHTML = '';
     }
 
     // Добавляем контент в ячейку
     cell.appendChild(contentCreator());
+}
+
+function isNumber(text) {
+    return /^-?\d+(\.\d+)?$/.test(text);
+}
+
+function chunkArray(arr, size) {
+    const result = [];
+    for (let i = 0; i < arr.length; i += size) {
+        result.push(arr.slice(i, i + size));
+    }
+    return result;
 }
 
 async function getSliderValue() {

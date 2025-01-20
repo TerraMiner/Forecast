@@ -81,8 +81,8 @@ async function getFromCacheOrFetch(key, fetch) {
             updateLastUsed(key, cached.lastUsed);
             return cached.data;
         }
-    } catch (error) {
-        error('Error reading from IndexedDB:', error);
+    } catch (err) {
+        error('Error reading from IndexedDB:', err);
     }
 
     const value = await fetch(key);

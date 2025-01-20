@@ -1,57 +1,3 @@
-<style>
-    .fc-score-table {
-        display: flex;
-        justify-content: flex-start;
-        background: transparent;
-        width: auto;
-    }
-
-    .fc-score-table .fc-score-table-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        position: relative;
-    }
-
-    .fc-score-table .inner-score-table {
-        background: transparent;
-        overflow: hidden;
-        table-layout: auto;
-    }
-
-    .fc-score-table th,
-    .fc-score-table td {
-        text-align: center;
-        color: #ffffff;
-        padding-left: 2px;
-        padding-right: 2px;
-        background: transparent;
-        box-shadow: none;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .fc-score-table th {
-        padding-top: 2px;
-        padding-bottom: 0;
-        position: relative;
-        background-color: transparent;
-    }
-
-    .fc-score-table td {
-        padding-top: 0;
-        padding-bottom: 2px;
-        vertical-align: middle;
-    }
-    .show-popup-button-wrap {
-        padding-left: 10px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-</style>
-
 <div class="fc-score-table">
     <div class="fc-score-table-container">
         <table class="inner-score-table" id="fc-score-table">
@@ -74,5 +20,45 @@
                 <path fill-rule="evenodd" clip-rule="evenodd" fill="#404040" d="M8 13.078c4.418 0 8-5 8-5s-3.582-5-8-5-8 5-8 5 3.582 5 8 5zm0-2a3 3 0 100-6 3 3 0 000 6zm0-1.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
             </svg>
         </button>
+        <div class="popup-wrapper">
+            <div class="popup-tooltip">
+                <table class="popup-scoreboard-table">
+                    <thead class="popup-table-header">
+                    <tr class="popup-table-row">
+                        <td class="popup-table-cell">Nick</td>
+                        <td class="popup-table-cell">K</td>
+                        <td class="popup-table-cell">A</td>
+                        <td class="popup-table-cell">D</td>
+                        <td class="popup-table-cell">K/R</td>
+                        <td class="popup-table-cell">K/D</td>
+                        <td class="popup-table-cell">Hs</td>
+                        <td class="popup-table-cell">Hs%</td>
+                        <td class="popup-table-cell">MVPs</td>
+                        <td class="popup-table-cell">ADR</td>
+                    </tr>
+                    </thead>
+                    <tbody class="popup-table-body" id="team-table-popup-1">
+                    </tbody>
+                </table>
+                <table class="popup-scoreboard-table">
+                    <thead class="popup-table-header">
+                    <tr class="popup-table-row">
+                        <td class="popup-table-cell">Nick</td>
+                        <td class="popup-table-cell">K</td>
+                        <td class="popup-table-cell">A</td>
+                        <td class="popup-table-cell">D</td>
+                        <td class="popup-table-cell">K/R</td>
+                        <td class="popup-table-cell">K/D</td>
+                        <td class="popup-table-cell">Hs</td>
+                        <td class="popup-table-cell">Hs%</td>
+                        <td class="popup-table-cell">MVPs</td>
+                        <td class="popup-table-cell">ADR</td>
+                    </tr>
+                    </thead>
+                    <tbody class="popup-table-body" id="team-table-popup-2">
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>

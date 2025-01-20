@@ -9,7 +9,7 @@ class Module {
         this.nodesToRemove = [];
         this.hidedNodes = [];
         this.tasks = [];
-        this.observerTasks = []
+        this.observerTasks = new Map();
         this.observer = null
     }
 
@@ -49,7 +49,7 @@ class Module {
     }
 
     #releaseCaches() {
-        this.observerTasks.length = 0
+        this.observerTasks.clear();
         if (this.observer) {
             this.observer.disconnect()
         }
@@ -94,16 +94,54 @@ class Module {
         this.hidedNodes.push(hiddenNode)
     }
 
-    doAfter(conditionFn, callback, interval = 50) {
-        const task = this.every(interval, async () => {
-            let conditionResult = conditionFn()
+    async doAfterAsync(conditionFn, callback, interval = 50) {
+        let isRunning = true;
+        let task;
+
+        const checkCondition = async () => {
+            if (!isRunning) return;
+
+            const conditionResult = conditionFn();
             if (conditionResult) {
-                task()
+                isRunning = false;
+                if (task) task();
                 await callback(conditionResult);
             }
-        })
+        };
 
-        return () => task();
+        await checkCondition();
+
+        task = this.every(interval, checkCondition);
+
+        return () => {
+            isRunning = false;
+            if (task) task();
+        };
+    }
+
+    doAfter(conditionFn, callback, interval = 50) {
+        let isRunning = true;
+        let task;
+
+        const checkCondition = () => {
+            if (!isRunning) return;
+
+            const conditionResult = conditionFn();
+            if (conditionResult) {
+                isRunning = false;
+                if (task) task();
+                callback(conditionResult);
+            }
+        };
+
+        checkCondition();
+
+        task = this.every(interval, checkCondition);
+
+        return () => {
+            isRunning = false;
+            if (task) task();
+        };
     }
 
     every(period, callback) {
@@ -112,8 +150,12 @@ class Module {
         return () => clearInterval(task)
     }
 
-    observe(task) {
-        this.observerTasks.push(task)
+    observe(id,task) {
+        this.observerTasks.set(id,task)
+    }
+
+    releaseObserver(id) {
+        this.observerTasks.delete(id)
     }
 
     registerObserver() {
@@ -121,7 +163,7 @@ class Module {
             for (const mutation of mutationsList) {
                 if (mutation.type === 'childList') {
                     for (const node of mutation.addedNodes) {
-                        this.observerTasks.forEach(async (task) => {
+                        this.observerTasks.forEach(async (task, _) => {
                             await task(node)
                         })
                     }
@@ -138,7 +180,7 @@ class Module {
     async doAfterNodeAppear(selector, callback) {
         let element = document.querySelector(selector);
         if (element) await callback(element)
-        this.observe(async () => {
+        this.observe(selector,async () => {
             let element = document.querySelector(selector);
             if (element) await callback(element);
         });
@@ -149,7 +191,7 @@ class Module {
         if (elements.length !== 0) for (const element of elements) {
             await callback(element);
         }
-        this.observe(async () => {
+        this.observe(selector,async () => {
             let elements = document.querySelectorAll(selector);
             for (const element of elements) {
                 if (element) await callback(element);
@@ -160,7 +202,7 @@ class Module {
     async doAfterAllNodeAppearPack(selector, callback) {
         let elements = document.querySelectorAll(selector);
         if (elements.length !== 0) await callback(elements)
-        this.observe(async () => {
+        this.observe(selector,async () => {
             let elements = document.querySelectorAll(selector);
             if (elements.length !== 0) await callback(elements);
         });

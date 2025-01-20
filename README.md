@@ -10,20 +10,10 @@ This project is a browser extension that retrieves and displays statistics for F
 - Introduced new Faceit Skill Levels with a more detailed breakdown by elo.
 - Display specific statistics in match history (Score, HLTV 2.0 rating, K/D, K/R, ADR)
 
-## Usage
-
-### Method 1. (RECOMMENDED)
-
-1. Just install from [Chrome Webstore](https://chromewebstore.google.com/detail/faceit-forecast/mpkkcddegpblmobincjkbpgfcbejjbcp)
-2. Open the Faceit website and navigate to the matchroom page.
-
-### Method 2: Batch Script Installation (MANUALLY, For Advanced Users)
-
-1. [Download the `.bat` file](https://github.com/TerraMiner/Forecast/blob/master/update.bat).
-2. Create a new folder on your computer and place the `.bat` file in this folder.
-3. Run the `.bat` file by double-clicking on it; it will automatically set up the required files in the folder.
-4. Go to [`chrome://extensions/`](chrome://extensions/) (If necessary, enable developer mode) and click "Load unpacked" to upload the folder.
-5. Open the Faceit website and navigate to the matchroom page.
+## Download
+- [Chrome Store](https://chromewebstore.google.com/detail/faceit-forecast/mpkkcddegpblmobincjkbpgfcbejjbcp)
+- [Firefox Store](https://addons.mozilla.org/en-US/firefox/addon/faceit-forecast/)
+- [Microsoft Store](https://microsoftedge.microsoft.com/addons/detail/faceit-forecast/kklfhhdnabdnkgncmibfiaeeoghainpj)
 
 ## Screenshots
 

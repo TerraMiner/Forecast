@@ -1,0 +1,466 @@
+.player-stats {
+    display: flex;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+    align-items: center;
+}
+
+.skill-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-block;
+}
+
+.details {
+    margin-left: 8px;
+    width: 100%;
+}
+
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.elo {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.progress-container {
+    margin-top: 1px;
+    margin-bottom: 1px;
+    height: 2px;
+    width: 100%;
+    background: rgb(75, 78, 78);
+}
+
+.progress {
+    height: 100%;
+    width: 0;
+    background: rgb(255, 85, 0);
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+}
+
+.master-progress-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+}
+
+.master-progress-bar-wrapper {
+    width: 100%;
+    margin: 5px 0 4px 0;
+}
+
+.master-progress-bar-holder {
+    width: 100%;
+    position: relative;
+}
+
+.master-progress-bar-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.master-progress-bar-inner {
+    width: 100%;
+    height: 12px;
+    border-radius: 2px;
+    position: relative;
+    box-sizing: border-box;
+    background: rgba(255, 85, 0, 0.08);
+    border: 1px solid rgba(255, 85, 0, 0.08);
+}
+
+.master-progress-bar {
+    top: 0;
+    inset-inline-start: 0;
+    bottom: 0;
+    width: 0;
+    border-radius: 2px;
+    position: absolute;
+    content: "";
+    background: linear-gradient(270deg, rgb(255, 85, 0) 0%, rgba(255, 85, 0, 0.08) 100%);
+}
+
+.master-level-info-left,
+.master-level-info-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 50%;
+    color: rgba(255, 255, 255, 0.38);
+}
+
+.master-level-info-left {
+    align-items: start;
+}
+
+.master-level-info-right {
+    align-items: end;
+}
+
+.master-level-text {
+    font-family: Play, sans-serif;
+    letter-spacing: 0.02em;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 20px;
+}
+
+.master-text-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.show-popup-button-wrap {
+    padding-left: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.show-popup-button-wrap:hover .popup-wrapper {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.popup-wrapper:focus-within .popup-wrapper {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.popup-wrapper {
+    position: relative !important;
+    z-index: 3 !important;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.popup-tooltip {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+    position: absolute;
+    left: 100%;
+    transform: translateY(-50%);
+    z-index: 9999;
+}
+
+.popup-scoreboard-table {
+    flex: 1 !important;
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    background-color: #1A1A1A !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.popup-table-header {
+    background-color: #202020 !important;
+    color: #fff !important;
+    text-align: center !important;
+}
+
+.popup-table-body {
+    background-color: #1A1A1A !important;
+}
+
+.popup-table-cell {
+    padding: 8px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    border: none !important;
+    background-color: transparent !important;
+    color: #fff;
+}
+
+.level-progress-container {
+    margin-bottom: 32px;
+    box-sizing: border-box;
+}
+
+.title {
+    font-weight: bold;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+}
+
+.stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.stat-block {
+    flex: 1;
+    background: rgb(22, 22, 22);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.stat-title {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.stat-label {
+    text-transform: uppercase;
+}
+
+.levels-container {
+    display: flex;
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.level {
+    flex: 0 0 calc(92% / 19);
+    border-right: 1px solid rgb(75, 78, 78);
+    text-align: center;
+    padding: 10px 0;
+    position: relative;
+}
+
+.level-large {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    position: relative;
+}
+
+.level span, .level-large span,
+.stat-block span {
+    width: 32px;
+    height: 32px;
+    display: inline-block;
+}
+
+.level-value {
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+.progress-bar-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: rgb(50, 55, 55, 1);
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: rgba(255, 85, 0, 1);
+    width: 0;
+}
+
+.divider {
+    height: 1px;
+    background: rgb(48, 48, 48);
+    margin: 32px 0;
+}
+
+.match-counter-arrow {
+    position: relative;
+    width: 100%;
+    height: 0;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.match-counter-arrow-triangle {
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-top-color: rgb(255, 85, 0);
+    transform: rotate(-90deg);
+}
+
+.match-counter-arrow-square {
+    min-width: 20px;
+    min-height: 20px;
+    background-color: rgb(255, 85, 0);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    white-space: nowrap;
+    padding: 0 2px;
+}
+
+.fc-score-table {
+    display: flex;
+    justify-content: flex-start;
+    background: transparent;
+    width: auto;
+}
+
+.fc-score-table .fc-score-table-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.fc-score-table .inner-score-table {
+    background: transparent;
+    overflow: hidden;
+    table-layout: auto;
+}
+
+.fc-score-table th,
+.fc-score-table td {
+    text-align: center;
+    color: #ffffff;
+    padding-left: 2px;
+    padding-right: 2px;
+    background: transparent;
+    box-shadow: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fc-score-table th {
+    padding-top: 2px;
+    padding-bottom: 0;
+    position: relative;
+    background-color: transparent;
+}
+
+.fc-score-table td {
+    padding-top: 0;
+    padding-bottom: 2px;
+    vertical-align: middle;
+}
+
+.player-background-table {
+    display: flex;
+    justify-content: center;
+    padding-top: 17px;
+    background: transparent;
+}
+
+.player-background-table .player-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.player-background-table .player-table {
+    width: 100%;
+    background: rgb(28, 28, 28);
+    border-radius: 4px;
+    border-collapse: collapse;
+    overflow: hidden;
+}
+
+.player-background-table th,
+.player-background-table td {
+    width: 100%;
+    height: 100%;
+    border: none;
+    text-align: center;
+    color: white;
+    padding: 10px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.player-background-table th {
+    position: relative;
+    background-color: rgb(37, 37, 37);
+}
+
+.player-background-table td {
+    vertical-align: middle;
+}
+
+.player-background-table .player-container {
+    height: 100%;
+}
+
+.team-background-table {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 0 3px;
+    background: transparent;
+}
+
+.team-container {
+    width: 48%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.team-background-table #roster1, .team-background-table #roster2 {
+    width: 100%;
+    background: rgb(28, 28, 28);
+    border-radius: 8px;
+    border-collapse: collapse;
+    overflow: hidden;
+    position: relative;
+}
+
+.team-name {
+    display: inline-block;
+    text-align: center;
+    background: rgb(37, 37, 37);
+    color: white;
+    border-radius: 8px 8px 0 0;
+    padding: 10px 20px;
+    font-weight: bold;
+    margin: 0;
+    z-index: 2;
+    position: relative;
+}
+
+.team-background-table th, .team-background-table td {
+    border: none;
+    text-align: center;
+    color: white;
+    padding: 10px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.team-background-table th {
+    position: relative;
+    background-color: rgb(37, 37, 37);
+}
+
+.team-background-table td {
+    vertical-align: middle;
+}

@@ -1,25 +1,25 @@
+const MATCHES_PER_LOAD = 30;
 const matchIds = [];
 const matchDetailedDatas = new Map();
+const preloadingIds = new Set();
 const matchNodesByMatchStats = [];
 
-let historyPopup = undefined
-
 class MatchNodeByMatchStats {
-    constructor(node, matchId, index) {
+    constructor(node, index) {
+        this.popup = null;
         this.node = node;
-        this.matchId = matchId;
         this.matchStats = null;
         this.rounds = 0;
         this.score = "";
         this.isWin = false;
         this.index = index
-        this.nodeId = `${matchHistoryModule.sessionId}-extended-stats-node-${index}`
+        this.nodeId = `extended-stats-node-${index}`
         this.setupMatchCounterArrow()
     }
 
-    async loadMatchStats(playerId) {
-        const detailedMatchInfo = await getDetailedMatchData(this.matchId);
-        this.detailedMatchInfo = detailedMatchInfo;
+    loadMatchStats(playerId) {
+        this.matchId = matchIds[this.index]
+        let detailedMatchInfo = matchDetailedDatas.get(this.matchId);
         if (!detailedMatchInfo) {
             error(`No detailed match info found for matchId: ${this.matchId}`);
             return;
@@ -35,9 +35,10 @@ class MatchNodeByMatchStats {
         this.rounds = parseInt(detailedMatchInfo.rounds[0].round_stats["Rounds"], 10);
         this.score = detailedMatchInfo.rounds[0].round_stats["Score"].replace(/\s+/g, '');
         this.isWin = team["team_stats"]["Team Win"] === "1";
+        this.setupStatsToNode(playerId, detailedMatchInfo);
     }
 
-    setupStatsToNode(playerId) {
+    setupStatsToNode(playerId, detailedMatchInfo) {
         if (!this.matchStats) return;
         const {
             "Kills": k,
@@ -55,14 +56,7 @@ class MatchNodeByMatchStats {
         const impact = (parseInt(k, 10) + 0.5 * parseInt(a, 10) - entryImpact * 1.5) / rounds;
 
         const rating = (0.0073 * kast + 0.3591 * parseFloat(kr) - 0.5329 * (parseInt(d, 10) / rounds) + 0.2372 * impact + 0.0032 * parseInt(adr, 10) + 0.1587).toFixed(2);
-        insertStatsIntoNode(this.node, this.score, rating, k, d, kd, kr, adr, this.isWin, this.nodeId);
-
-        historyPopup.attachToElement(this.node, this.detailedMatchInfo, playerId)
-    }
-
-    setupEmptyNode() {
-        if (document.getElementById(this.nodeId)) return;
-        insertStatsIntoNode(this.node, this.score, null, null, null, null, null, null, this.isWin, this.nodeId);
+        insertStatsIntoNode(this, rating, k, d, kd, kr, adr, playerId, detailedMatchInfo);
     }
 
     setupMatchCounterArrow() {
@@ -91,7 +85,7 @@ class MatchNodeByMatchStats {
         }
         if (!document.getElementById(arrowId)) {
             appendTo(arrow, this.node, 'arrow')
-            arrow.querySelector("[class=square]").innerText = matchNumber
+            arrow.querySelector("[class=match-counter-arrow-square]").innerText = matchNumber
         }
     }
 }
@@ -99,7 +93,7 @@ class MatchNodeByMatchStats {
 const matchHistoryModule = new Module("matchhistory", async () => {
     if (!(await isExtensionEnabled()) || !(await isSettingEnabled("matchhistory"))) return;
 
-
+    await loadMatchHistoryCache();
     await new Promise(resolve => {
         const maxAttempts = 50;
         let attempts = 0;
@@ -121,62 +115,74 @@ const matchHistoryModule = new Module("matchhistory", async () => {
         checkOtherExtension();
     });
 
-    let sessionId = matchHistoryModule.sessionId;
-    let tableRowId = `${sessionId}-table-row-id`;
-    historyPopup = new MatchroomPopup();
+    let tableRowAttribute = `forecast-matchhistory-row-${matchHistoryModule.sessionId}`;
 
-    const playerId = (await getPlayerStatsByNickName(extractPlayerNick())).player_id;
-    matchHistoryModule.playerId = playerId;
-    await loadAllPlayerMatches(playerId);
-    let ended = false;
+    const playerId = (await fetchPlayerStatsByNickName(extractPlayerNick())).player_id;
 
     let lastIndex = -1
-    let lastBatchIndex = 0
+    let tableElement;
+    let tableHeadElement;
+    let selector = `tr[class*='styles__MatchHistoryTableRow']:not([${tableRowAttribute}]):not(:has([id*='extended-stats-node']))`;
 
-    await matchHistoryModule.doAfterAllNodeAppearPack(`tr[class*='styles__MatchHistoryTableRow']:not([id*='${tableRowId}'])`, async (nodes) => {
-        if (ended) return;
-        let batch = []
-        for (let node of nodes) {
-            const index = lastIndex === -1 ? (Array.from(node.parentNode.children).filter(child => child.tagName === 'TR').indexOf(node) - 1) : lastIndex;
-            if (node.id === `${tableRowId}-${index}`) continue;
-            node.id = `${tableRowId}-${index}`;
-            if (index === 299) ended = true;
-            if (index === -1) continue;
-            if (index > 299) return;
-            lastIndex = index + 1;
-            let matchNodeByMatchStats = new MatchNodeByMatchStats(node, matchIds[index], index);
-            matchNodeByMatchStats.setupEmptyNode();
-            batch.push(matchNodeByMatchStats);
+    await matchHistoryModule.doAfterAllNodeAppearPack(selector, async (nodes) => {
+        if (!tableElement) tableElement = nodes[0].parentNode.children;
+        if (!tableHeadElement) tableHeadElement = tableElement[0];
+
+        let tableNodesArray = Array.from(tableElement).filter(child => child.tagName === 'TR');
+
+        let nodeArrays = chunkArray(Array.from(nodes).filter((node) => {
+            let flag = tableHeadElement !== node && !node.hasAttribute(tableRowAttribute);
+            if (flag) node.setAttribute(tableRowAttribute, '');
+            return flag
+        }), MATCHES_PER_LOAD);
+
+        if (nodeArrays.length === 0) return
+
+        for (const nodeArray of nodeArrays) {
+            let batch = [];
+            let batchIndex = lastIndex === -1 ? 0 : lastIndex
+            for (let node of nodeArray) {
+                const index = lastIndex === -1 ? (tableNodesArray.indexOf(node) - 1) : lastIndex;
+                if (index === -1) continue;
+                lastIndex = index + 1;
+                batch.push(new MatchNodeByMatchStats(node, index));
+            }
+            //todo add queue to request matches
+            await loadPlayerMatchHistory(playerId, batchIndex - 1, () => {
+                loadDetailedMatches(batchIndex)?.then(() => {
+                    Promise.all(batch.map(node => node.loadMatchStats(playerId)))
+                })
+            });
         }
-        if (lastIndex / 30 !== lastBatchIndex) {
-            await loadNextBatchIfNeeded(lastBatchIndex * 30);
-            lastBatchIndex = lastIndex / 30;
-        }
-        await Promise.all(batch.map(node => node.loadMatchStats(playerId)));
-        batch.forEach(node => node.setupStatsToNode())
     });
 }, async () => {
     matchNodesByMatchStats.length = 0;
     matchIds.length = 0;
+    matchDetailedDatas.clear()
+    preloadingIds.clear()
 });
 
-function insertStatsIntoNode(root, score, rating, k, d, kd, kr, adr, isWin, id) {
-    const fourthNode = root?.children[3];
-    if (!fourthNode) return
+function insertStatsIntoNode(matchNode, rating, k, d, kd, kr, adr, playerId, detailedMatchInfo) {
+    const fourthNode = matchNode.node?.children[3];
+    if (!fourthNode) return;
 
-    let tableTemplate = document.getElementById(id);
+    let tableTemplate = document.getElementById(matchNode.nodeId);
     let tableNotExist = !tableTemplate;
 
     if (tableNotExist) {
         tableTemplate = getHtmlResource("src/visual/tables/matchscore.html").cloneNode(true)
-        tableTemplate.id = id
-        matchHistoryModule.removalNode(tableTemplate);
+        tableTemplate.id = matchNode.nodeId
     }
 
-    insertRow(tableTemplate, score, rating, k, d, kd, kr, adr, isWin);
+    insertRow(tableTemplate, matchNode.score, rating, k, d, kd, kr, adr, matchNode.isWin);
+
+    if (matchNode.popup === null) {
+        matchNode.popup = new MatchroomPopup(tableTemplate)
+        matchNode.popup.attachToElement(tableTemplate, detailedMatchInfo, playerId)
+    }
 
     if (tableNotExist) {
-        matchHistoryModule.appendToAndHide(tableTemplate, fourthNode.querySelector("span"), 'table-template')
+        appendToAndHide(tableTemplate, fourthNode.querySelector("span"), 'table-template')
     }
 }
 
@@ -189,7 +195,7 @@ function insertRow(node, score, rating, k, d, kd, kr, adr, isWin) {
         const div = document.createElement("span");
         div.style.color = isSlash || !text ? white : (condition ? green : red);
         if (condition) div.style.fontWeight = "bold";
-        div.innerHTML = text ? text : "-";
+        div.textContent = text || "-";
         return div;
     };
 
@@ -206,44 +212,40 @@ function insertRow(node, score, rating, k, d, kd, kr, adr, isWin) {
     let [scorePart1, scorePart2] = score.split("/");
 
     replaceOrInsertCell(tableRow, 0, () => createCompositeCell([
-        { text: scorePart1, condition: isWin },
-        { text: "/", isSlash: true },
-        { text: scorePart2, condition: isWin }
+        {text: scorePart1, condition: isWin},
+        {text: "/", isSlash: true},
+        {text: scorePart2, condition: isWin}
     ]));
 
     replaceOrInsertCell(tableRow, 1, () => createColoredDiv(isNaN(rating) ? null : rating, rating >= 1.0));
 
     replaceOrInsertCell(tableRow, 2, () => createCompositeCell([
-        { text: k, condition: kd >= 1.0 },
-        { text: "/", isSlash: true },
-        { text: d, condition: kd >= 1.0 }
+        {text: k, condition: kd >= 1.0},
+        {text: "/", isSlash: true},
+        {text: d, condition: kd >= 1.0}
     ]));
 
     replaceOrInsertCell(tableRow, 3, () => createCompositeCell([
-        { text: kd, condition: kd >= 1.0 },
-        { text: "/", isSlash: true },
-        { text: kr, condition: kr >= 0.65 }
+        {text: kd, condition: kd >= 1.0},
+        {text: "/", isSlash: true},
+        {text: kr, condition: kr >= 0.65}
     ]));
 
     replaceOrInsertCell(tableRow, 4, () => createColoredDiv(adr, adr >= 75));
 }
 
-async function getDetailedMatchData(matchId) {
-    if (matchDetailedDatas.has(matchId)) return matchDetailedDatas.get(matchId);
-    let matchData = await getFromCacheOrFetch(matchId, fetchMatchStatsDetailed);
-    matchDetailedDatas.set(matchId, matchData);
-    return matchData;
+async function loadAllPlayerMatches(playerId, from) {
+    const results = await loadPlayerMatches(playerId, MATCHES_PER_LOAD, from);
+    let duplicate = matchIds.find((a) => results.some((b) => a === b))
+    if (duplicate) {
+        console.log(`Duplicate (${from}) ${duplicate}`)
+    }
+
+    results.forEach(id => matchIds.push(id));
 }
 
-async function loadAllPlayerMatches(playerId) {
-    await loadMatchHistoryCache();
-    const results = await Promise.all([0, 100, 200].map(from => loadPlayerMatches(playerId, from)));
-    const allMatchIds = results.flat();
-    allMatchIds.forEach(id => matchIds.push(id));
-}
-
-async function loadPlayerMatches(playerId, from, limit = 100) {
-    const playerGameDatas = await getPlayerGameStats(playerId, extractGameType(), limit, from);
+async function loadPlayerMatches(playerId, amount, date) {
+    const playerGameDatas = await fetchPlayerInGameStats(playerId, extractGameType(), amount, date);
     return playerGameDatas.items.map(item => item.stats["Match Id"]);
 }
 
@@ -255,37 +257,33 @@ function findPlayerInTeamById(teams, playerId) {
     return {};
 }
 
-async function loadNextBatchIfNeeded(currentIndex) {
-    const batchSize = 30;
-    const preloadThreshold = 5;
-
-    const neededBatch = Math.floor(currentIndex / batchSize);
-    const currentLoadedBatch = Math.floor(matchDetailedDatas.size / batchSize);
-
-    const batchStart = currentLoadedBatch * batchSize;
-    const batchEnd = Math.min(batchStart + batchSize, matchIds.length);
-
-    const isAlreadyLoading = matchIds
-        .slice(batchStart, batchEnd)
-        .some(matchId => matchDetailedDatas.has(matchId) || matchDetailedDatas.get(matchId) === null);
-    let batch = []
-    if (currentIndex % batchSize >= (batchSize - preloadThreshold) &&
-        neededBatch >= currentLoadedBatch &&
-        currentIndex < 300 &&
-        !isAlreadyLoading) {
-
-        for (let i = batchStart; i < batchEnd; i++) {
-            const matchId = matchIds[i];
-            if (!matchDetailedDatas.has(matchId)) {
-                matchDetailedDatas.set(matchId, null);
-
-                batch.push(getDetailedMatchData(matchId)
-                    .catch(err => {
-                        error(`Error preloading match data for ${matchId}:`, err);
-                        matchDetailedDatas.delete(matchId);
-                    }));
-            }
-        }
+async function loadPlayerMatchHistory(playerId, fromId, callback) {
+    if (matchIds.length === 0) {
+        await loadAllPlayerMatches(playerId, 0).then(callback)
+        return
     }
-    await Promise.all(batch);
+
+    matchHistoryModule.doAfter(() => matchIds[fromId], (matchId) => {
+        fetchMatchStats(matchId).then(match => {
+            let from = match["finished_at"];
+            loadAllPlayerMatches(playerId, parseInt(from, 10) * 1000).then(callback)
+        })
+    }, 50)
+}
+
+function loadDetailedMatches(fromId) {
+    const toId = Math.min(fromId + MATCHES_PER_LOAD, matchIds.length);
+    if (fromId >= toId) return null
+    let batch = [];
+
+    for (let i = fromId; i < toId; i++) {
+        const matchId = matchIds[i];
+        if (preloadingIds.has(matchId) || matchDetailedDatas.has(matchId)) continue;
+        batch.push(getFromCacheOrFetch(matchId, fetchMatchStatsDetailed)
+            .then(result => matchDetailedDatas.set(matchId, result))
+            .finally(() => preloadingIds.delete(matchId)));
+        preloadingIds.add(matchId);
+    }
+
+    return Promise.all(batch);
 }

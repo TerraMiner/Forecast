@@ -39,6 +39,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "src/visual/tables/forecaststyles.css",
         "src/visual/tables/team.html",
         "src/visual/tables/matchscore.html",
         "src/visual/tables/level-progress-table.html",
@@ -46,7 +47,6 @@
         "src/visual/tables/elo-progress-bar-master.html",
         "src/visual/tables/player.html",
         "src/visual/tables/match-counter-arrow.html",
-        "src/visual/tables/hover-popup-matchroom.html",
         "src/visual/tables/levels/level1.html",
         "src/visual/tables/levels/level2.html",
         "src/visual/tables/levels/level3.html",

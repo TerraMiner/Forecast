@@ -2,7 +2,6 @@ const baseUrlV4 = "https://open.faceit.com/data/v4";
 
 const playerDataCache = new Map();
 const playerGamesDataCache = new Map();
-const playerMatchHistoryCache = new Map();
 const matchDataCache = new Map();
 const oldMatchDataCache = new Map();
 const matchDataStatsCache = new Map();
@@ -46,15 +45,16 @@ async function fetchMatchStatsDetailed(matchId) {
     );
 }
 
-async function getPlayerGameStats(playerId, game, matchAmount = 20, offset = 0) {
+async function fetchPlayerInGameStats(playerId, game, matchAmount = 30, latestMatchTime = 0) {
+    let param = latestMatchTime !== 0 ? `&to=${latestMatchTime}` : "";
     return await fetchV4(
         playerGamesDataCache,
-        `${baseUrlV4}/players/${playerId}/games/${game}/stats?limit=${matchAmount}&offset=${offset}`,
+        `${baseUrlV4}/players/${playerId}/games/${game}/stats?limit=${matchAmount}${param}`,
         "Error when requesting player game data"
     );
 }
 
-async function getPlayerStatsById(playerId) {
+async function fetchPlayerStatsById(playerId) {
     return fetchV4(
         playerDataCache,
         `${baseUrlV4}/players/${playerId}`,
@@ -62,7 +62,7 @@ async function getPlayerStatsById(playerId) {
     );
 }
 
-async function getPlayerStatsByNickName(nickname) {
+async function fetchPlayerStatsByNickName(nickname) {
     return fetchV4(
         playerDataCache,
         `${baseUrlV4}/players?nickname=${encodeURIComponent(nickname)}`,
@@ -74,12 +74,12 @@ async function fetchOldMatchStats(matchId) {
     let cachedData = oldMatchDataCache.get(matchId)
     if (cachedData) return cachedData
 
-    const token = getApiKey();
+    const apiKey = getApiKey();
     const url = `https://api.faceit.com/match/v2/match/${matchId}`;
     const options = {
         method: 'GET',
         headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
         },
         credentials: 'include',

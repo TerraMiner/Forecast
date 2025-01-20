@@ -1,250 +1,76 @@
 class MatchroomPopup {
-    constructor() {
-        this.popupElement = getHtmlResource("src/visual/tables/hover-popup-matchroom.html").cloneNode(true);
-        this.popupElement.classList.add('popup-tooltip');
-
-        Object.assign(this.popupElement.style, {
-            display: "none",
-            position: "fixed",
-            transition: "opacity 0.2s ease, transform 0.2s ease",
-            opacity: "0",
-            transform: "translateY(-5px)",
-            pointerEvents: "none",
-            zIndex: 3
-        });
-
-        this.targetNodes = new Map();
-        this.activeTarget = null;
-        this.isPopupVisible = false;
-
-        document.addEventListener("click", this.handleDocumentClick.bind(this));
+    constructor(table) {
+        this.wrapper = table.querySelector("[class=popup-wrapper]");
+        this.popup = this.wrapper.children[0];
+        this.isAttached = false;
+        this.stats = null;
     }
 
     attachToElement(element, matchStatistic, playerId) {
-        if (this.targetNodes.has(element)) return;
-        this.playerId = playerId;
+        if (this.isAttached) return;
 
-        const popupClone = this.popupElement.cloneNode(true);
-        popupClone.classList.add('popup-tooltip');
+        this.playerId = playerId;
+        this.stats = matchStatistic;
 
         const popupContainer = element.querySelector('.show-popup-button-wrap');
+        this.setupStats();
+        popupContainer.appendChild(this.wrapper);
 
-        const popupWrapper = document.createElement('div');
-        Object.assign(popupWrapper.style, {
-            position: 'relative',
-            zIndex: 3
-        });
-
-        popupWrapper.appendChild(popupClone);
-        popupContainer.appendChild(popupWrapper);
-
-        this.targetNodes.set(element, {
-            stats: matchStatistic,
-            popup: popupClone,
-            wrapper: popupWrapper
-        });
-
-        const button = element.querySelector('.show-popup-button');
-
-        const handleMouseEnter = (event) => {
-            if (this.activeTarget && this.activeTarget !== element) {
-                this.hidePopup();
-            }
-            clearTimeout(this.hideTimeout);
-            this.handleButtonMouseEnter(event, element);
-        };
-
-        const handleMouseLeave = (event) => {
-            const { popup, wrapper } = this.targetNodes.get(element);
-            const relatedTarget = event.relatedTarget;
-
-            const targetingOtherButton = relatedTarget && relatedTarget.closest('.show-popup-button');
-
-            if ((!popup.contains(relatedTarget) && !wrapper.contains(relatedTarget)) || targetingOtherButton) {
-                this.hideTimeout = setTimeout(() => {
-                    this.hidePopup();
-                    this.activeTarget = null;
-                }, 100);
-            }
-        };
-
-        button.addEventListener("mouseenter", handleMouseEnter);
-        button.addEventListener("mouseleave", handleMouseLeave);
-        popupWrapper.addEventListener("mouseenter", () => clearTimeout(this.hideTimeout));
-        popupWrapper.addEventListener("mouseleave", handleMouseLeave);
+        this.isAttached = true;
     }
 
-    handleButtonMouseEnter(event, target) {
-        this.activeTarget = target;
-        const { popup } = this.targetNodes.get(target);
-        this.updateContent(target, popup);
-
-        requestAnimationFrame(() => {
-            this.showPopup(popup);
-            this.positionPopup(event.target.getBoundingClientRect(), popup);
-        });
-    }
-
-    handleButtonMouseLeave(event) {
-        setTimeout(() => {
-            if (!this.popupElement.matches(':hover')) {
-                this.hidePopup();
-                this.activeTarget = null;
-            }
-        }, 50);
-    }
-
-    handlePopupMouseLeave(event) {
-        const button = this.activeTarget?.querySelector('.show-popup-button');
-        if (!button?.matches(':hover')) {
-            this.hidePopup();
-            this.activeTarget = null;
-        }
-    }
-
-    handleDocumentClick(event) {
-        if (this.isPopupVisible && !this.popupElement.contains(event.target)) {
-            this.hidePopup();
-            this.activeTarget = null;
-        }
-    }
-
-    positionPopup(buttonRect, popup) {
-        const popupRect = popup.getBoundingClientRect();
-        const wrapperRect = popup.parentElement.getBoundingClientRect();
-
-        const left = -(popupRect.width / 2) + (buttonRect.width / 2);
-
-        const viewportWidth = window.innerWidth;
-        const popupLeft = wrapperRect.left + left;
-
-        if (popupLeft < 0) {
-            popup.style.left = `${-wrapperRect.left}px`;
-        } else if (popupLeft + popupRect.width > viewportWidth) {
-            popup.style.left = `${viewportWidth - wrapperRect.left - popupRect.width}px`;
-        } else {
-            popup.style.left = `${left}px`;
-        }
-
-        popup.style.top = '0';
-    }
-
-    showPopup(popup) {
-        popup.style.display = "block";
-
-        requestAnimationFrame(() => {
-            Object.assign(popup.style, {
-                opacity: "1",
-                transform: "translateY(0)",
-                pointerEvents: "auto"
-            });
-            this.isPopupVisible = true;
-        });
-    }
-
-    hidePopup() {
-        if (!this.activeTarget) return;
-        const { popup } = this.targetNodes.get(this.activeTarget);
-
-        Object.assign(popup.style, {
-            opacity: "0",
-            transform: "translateY(-5px)",
-            pointerEvents: "none"
-        });
-
-        setTimeout(() => {
-            if (popup.style.opacity === "0") {
-                popup.style.display = "none";
-                this.isPopupVisible = false;
-            }
-        }, 200);
-    }
-
-    updateContent(target, popup) {
-        const { stats } = this.targetNodes.get(target);
+    setupStats() {
         const sortByKills = (players) => players.sort((a, b) => b.player_stats["Kills"] - a.player_stats["Kills"]);
 
         const teams = [
-            sortByKills(stats.rounds[0].teams[0].players),
-            sortByKills(stats.rounds[0].teams[1].players),
+            sortByKills(this.stats.rounds[0].teams[0].players),
+            sortByKills(this.stats.rounds[0].teams[1].players),
         ];
 
         const tables = [
-            popup.querySelector(`#team-table-popup-1`),
-            popup.querySelector(`#team-table-popup-2`)
+            this.popup.querySelector(`#team-table-popup-1`),
+            this.popup.querySelector(`#team-table-popup-2`),
         ];
 
-        tables.forEach(table => table.innerHTML = "");
+        const rowTemplate = document.createElement("tr");
+        rowTemplate.classList.add("popup-table-row");
+        const cellTemplate = document.createElement("td");
+        cellTemplate.classList.add("popup-table-cell");
 
-        teams.forEach((team, index) => {
-            team.forEach((playerStats) => {
-                const row = document.createElement("tr");
-                row.classList.add("popup-table-row");
-                const stats = playerStats["player_stats"];
-                const data = [
-                    playerStats.nickname,
-                    stats["Kills"],
-                    stats["Assists"],
-                    stats["Deaths"],
-                    stats["K/R Ratio"],
-                    stats["K/D Ratio"],
-                    stats["Headshots"],
-                    stats["Headshots %"],
-                    stats["MVPs"],
-                    stats["ADR"]
-                ];
+        const createRow = (playerStats) => {
+            const row = rowTemplate.cloneNode(true);
+            const stats = playerStats["player_stats"];
+            const data = [
+                playerStats.nickname,
+                stats["Kills"],
+                stats["Assists"],
+                stats["Deaths"],
+                stats["K/R Ratio"],
+                stats["K/D Ratio"],
+                stats["Headshots"],
+                stats["Headshots %"],
+                stats["MVPs"],
+                stats["ADR"],
+            ];
 
-                data.forEach((value, cellIndex) => {
-                    const cell = document.createElement("td");
-                    if (cellIndex === 0 && this.playerId === playerStats.player_id) {
-                        cell.style.color = "rgb(255, 85, 0)";
-                    }
-                    cell.classList.add("popup-table-cell");
-                    cell.textContent = value;
-                    row.appendChild(cell);
-                });
-
-                tables[index].appendChild(row);
-            });
-        });
-
-        requestAnimationFrame(() => {
-            const button = target.querySelector('.show-popup-button');
-            if (!button) {
-                error('Button not found');
-                return;
-            }
-
-            const buttonRect = button.getBoundingClientRect();
-            const [table1, table2] = popup.querySelectorAll('.popup-scoreboard-table');
-            if (!table1 || !table2) {
-                error('Tables not found');
-                return;
-            }
-
-            const table1Height = table1.getBoundingClientRect().height;
-
-            Object.assign(popup.style, {
-                display: 'flex',
-                position: 'absolute',
-                opacity: '0',
-                pointerEvents: 'none',
-                zIndex: '9999'
+            data.forEach((value, index) => {
+                const cell = cellTemplate.cloneNode(true);
+                if (index === 0 && this.playerId === playerStats.player_id) {
+                    cell.style.color = "#FF5500FF";
+                    cell.style.fontWeight = "bold";
+                }
+                cell.textContent = value;
+                row.appendChild(cell);
             });
 
-            requestAnimationFrame(() => {
-                const wrapperRect = popup.parentElement.getBoundingClientRect();
-                const buttonCenterY = buttonRect.top - wrapperRect.top + (buttonRect.height / 2);
-                const top = buttonCenterY - (table1Height + 2.5);
+            return row;
+        };
 
-                Object.assign(popup.style, {
-                    left: '100%',
-                    top: `${top}px`,
-                    opacity: '1',
-                    pointerEvents: 'auto',
-                    marginLeft: '5px'
-                });
-            });
-        });
+        for (let index = 0; index < teams.length; index++) {
+            let team = teams[index];
+            const table = tables[index];
+            const rows = team.map(createRow);
+            table.append(...rows);
+        }
     }
 }

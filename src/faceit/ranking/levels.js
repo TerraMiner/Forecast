@@ -72,7 +72,7 @@ class PartySlot {
                 elo = parseInt(eloText.replace(/[\s,._]/g, ''), 10)
                 oldIcon = levelNode.querySelector('[class*="SkillIcon__StyledSvg"]')
             } else {
-                let playerStatistic = await getPlayerStatsByNickName(newNick);
+                let playerStatistic = await fetchPlayerStatsByNickName(newNick);
                 let {gameStats} = getStatistic(playerStatistic)
                 if (!gameStats) return
                 elo = parseInt(gameStats["faceit_elo"], 10);
@@ -108,9 +108,9 @@ const newLevelsModule = new Module("levels", async () => {
     document.head.appendChild(styleElement);
 
     await newLevelsModule.doAfterNodeAppear('[class*="Content__StyledContentElement"]', async (element) => {
-        let uniqueCheck = () => element.parentElement.querySelector('[id*="statistic-progress-bar"]')
+        let uniqueCheck = () => element?.parentElement?.querySelector('[id*="statistic-progress-bar"]')
         if (!uniqueCheck()) {
-            newLevelsModule.doAfter(() => element.querySelector('[class*="styles__HeadingWrapper"]'), async (result) => {
+            await newLevelsModule.doAfterAsync(() => element.querySelector('[class*="styles__HeadingWrapper"]'), async (result) => {
                 if (uniqueCheck()) return
                 let nick = result.innerText
                 let target = result.parentElement.parentElement.querySelector('[class*="styles__BottomAreaWrapper"]')
@@ -150,26 +150,29 @@ const newLevelsModule = new Module("levels", async () => {
 
     if (lobbyType === "matchroom") {
         let gameType = extractGameType();
-        await newLevelsModule.doAfterAllNodeAppear('[class*=Subtitle__Holder]', async (eloNode) => {
+        let selector = '[class*=Subtitle__Holder]';
+        await newLevelsModule.doAfterAllNodeAppear(selector, async (eloNode) => {
+            if (!isNumber(eloNode.innerText)) return;
             let eloNodeParent = eloNode.parentElement.parentElement;
             if (eloNodeParent.parentElement.querySelector(`[id*="${levelIconId}"]`)) return;
             let elo = parseInt(eloNode.innerText, 10);
             let currentLevel = getLevel(elo, gameType);
-            let newIcon = levelIcons.get(currentLevel).cloneNode(true).firstChild
+            let newIcon = levelIcons.get(currentLevel).cloneNode(true).firstChild;
             newIcon.id = `${levelIconId}${currentLevel}`;
             appendTo(newIcon, eloNodeParent);
         });
     } else if (lobbyType === "profile") {
-        await newLevelsModule.doAfterNodeAppear('[class*="styles__TitleContainer-"]', async (node) => {
-            let uniqueCheck = () => node.querySelector(`[id*='${newEloLevelIconId}']`)
-            if (uniqueCheck()) return
-            newLevelsModule.doAfter(() => node.children.length >= 2 && node.querySelector('svg'), async () => {
+        let selector = '[class*="styles__TitleContainer-"]';
+        await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
+            let uniqueCheck = () => document.getElementById(newEloLevelIconId) || node.querySelector(`[id*='${newEloLevelIconId}']`)
+            if (uniqueCheck()) return;
+            await newLevelsModule.doAfterAsync(() => node.children.length >= 2 && node.querySelector('svg'), async () => {
                 if (uniqueCheck()) return
                 let badgeHolder = node.querySelector('[class*="BadgeHolder__Holder"]')
                 let svgNode = node.querySelector('svg')
                 let isTopIcon = !!badgeHolder
                 let nick = extractPlayerNick()
-                let playerStatistic = await getPlayerStatsByNickName(nick);
+                let playerStatistic = await fetchPlayerStatsByNickName(nick);
                 let {gameStats, gameType} = getStatistic(playerStatistic)
                 if (!gameStats) return
                 if (document.getElementById(newEloLevelIconId)) return
@@ -191,7 +194,7 @@ const newLevelsModule = new Module("levels", async () => {
         })
     } else if (lobbyType === "stats") {
         let nick = extractPlayerNick()
-        let playerStatistic = await getPlayerStatsByNickName(nick);
+        let playerStatistic = await fetchPlayerStatsByNickName(nick);
         let {gameStats, deprecatedGameType} = getStatistic(playerStatistic)
         let gameType = extractGameType() || deprecatedGameType;
         if (!gameStats) return
@@ -199,11 +202,10 @@ const newLevelsModule = new Module("levels", async () => {
         let elo = parseInt(gameStats["faceit_elo"], 10);
         let progress = getBarProgress(elo, gameType)
         let currentLevel = getLevel(elo, gameType);
+        let iconSelector = '[class*="SkillIcon__StyledSvg"],[class*="BadgeHolder__Holder"]';
+        await newLevelsModule.doAfterNodeAppear(iconSelector, (node) => {
+            if (document.getElementById(newEloLevelIconId) || node.parentElement.parentElement.querySelector(`[id*='${newEloLevelIconId}']`)) return;
 
-        await newLevelsModule.doAfterNodeAppear('[class*="SkillIcon__StyledSvg"],[class*="BadgeHolder__Holder"]', (node) => {
-            let uniqueCheck = () => node.parentElement.parentElement.querySelector(`[id*='${newEloLevelIconId}']`)
-            if (uniqueCheck()) return
-            if (document.getElementById(newEloLevelIconId)) return
             let icon = levelIcons.get(currentLevel).cloneNode(true).firstChild
             icon.id = newEloLevelIconId
             newLevelsModule.removalNode(icon);
@@ -223,10 +225,10 @@ const newLevelsModule = new Module("levels", async () => {
                 newLevelsModule.appendToAndHide(icon, node)
             }
         })
+        let progressBarSelector = '[class*="ProgressBar__ProgressHolder"]'
+        await newLevelsModule.doAfterNodeAppear(progressBarSelector, async (node) => {
+            if (document.getElementById(masterProgressBarId) || node.parentElement.parentElement.parentElement.parentElement.querySelector(`[id*='${masterProgressBarId}']`)) return;
 
-        await newLevelsModule.doAfterNodeAppear('[class*="ProgressBar__ProgressHolder"]', async (node) => {
-            let uniqueCheck = () => node.parentElement.parentElement.parentElement.parentElement.querySelector(`[id*='${masterProgressBarId}']`)
-            if (uniqueCheck()) return
             let section = node.parentElement.parentElement.parentElement
 
             let newTable = getHtmlResource("src/visual/tables/elo-progress-bar-master.html").cloneNode(true)
@@ -248,10 +250,11 @@ const newLevelsModule = new Module("levels", async () => {
         })
     } else if (lobbyType === "matchmaking") {
         let partySlots = new Map();
-        await newLevelsModule.doAfterNodeAppear('[class*=Matchmaking__PlayHolder]', async (node) => {
+        let selector = '[class*=Matchmaking__PlayHolder]';
+        await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
             let uniqueCheck = () => node.id === matchmakingHolderId
             if (uniqueCheck()) return
-            newLevelsModule.doAfter(() => {
+            await newLevelsModule.doAfterAsync(() => {
                 let firstChild = node.firstElementChild
                 return firstChild && firstChild?.children?.length === 2 && firstChild?.children[1]?.children?.length === 5
             }, async () => {
@@ -286,12 +289,13 @@ const newLevelsModule = new Module("levels", async () => {
             })
         })
     } else if (lobbyType === "collections") {
-        await newLevelsModule.doAfterNodeAppear('[class*="styles__EloText"]', (node) => {
+        let selector = '[class*="styles__EloText"]';
+        await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
             let uniqueCheck = () => node.id === collectionLevelIconId
             if (uniqueCheck()) return
             let eloText = node.innerText
             let elo = parseInt(eloText.replace(/[\s,._]/g, ''), 10)
-            newLevelsModule.doAfter(() => node.parentElement.querySelector('svg'), (oldIcon) => {
+            await newLevelsModule.doAfterAsync(() => node.parentElement.querySelector('svg'), (oldIcon) => {
                 if (uniqueCheck()) return
                 let currentLevel = getLevel(elo, "cs2");
                 let newIcon = levelIcons.get(currentLevel).cloneNode(true)
@@ -304,15 +308,16 @@ const newLevelsModule = new Module("levels", async () => {
     }
 
     doAfterSearchPlayerNodeAppear(async (node) => {
-        newLevelsModule.doAfter(() => node.childNodes && node.childNodes.length > 2, async () => {
+        await newLevelsModule.doAfterAsync(() => !node || node.childNodes && node.childNodes.length > 2, async () => {
+            if (!node) return
             let currentNode = node.childNodes[1];
             for (let i = 0; i < 7; i++) {
                 currentNode = currentNode.firstElementChild;
                 if (currentNode.tagName === "SPAN" && i === 0) break
             }
             let nick = currentNode?.innerText;
-            newLevelsModule.doAfter(() => Array.from(node?.childNodes[2]?.firstElementChild?.childNodes).find(node => node.tagName === "svg"), async (oldIcon) => {
-                let playerStatistic = await getPlayerStatsByNickName(nick);
+            await newLevelsModule.doAfterAsync(() => Array.from(node?.childNodes[2]?.firstElementChild?.childNodes).find(node => node.tagName === "svg"), async (oldIcon) => {
+                let playerStatistic = await fetchPlayerStatsByNickName(nick);
                 let {gameStats, gameType} = getStatistic(playerStatistic)
                 if (!gameStats) return
                 let elo = parseInt(gameStats["faceit_elo"], 10);
@@ -347,10 +352,11 @@ function findPlayerInTeamByNickname(teams, nickname) {
 
 async function insertStatsToEloBar(nick) {
     let gameType = "cs2"
-    let playerStatistic = await getPlayerStatsByNickName(nick);
+    let playerStatistic = await fetchPlayerStatsByNickName(nick);
     let gameStats = playerStatistic["games"][gameType];
-
-    document.getElementById("user-url").setAttribute("href", `/${extractLanguage()}/players/${nick}/stats/${gameType}`)
+    let userUrlElement = document.getElementById("user-url");
+    if (!userUrlElement) return
+    userUrlElement.setAttribute("href", `/${extractLanguage()}/players/${nick}/stats/${gameType}`)
 
     let elo = parseInt(gameStats["faceit_elo"], 10);
     let currentLevel = getLevel(elo, gameType)
@@ -378,21 +384,16 @@ async function insertStatsToEloBar(nick) {
 
 function doAfterSearchPlayerNodeAppear(callback) {
     const targetHrefPattern = new RegExp(`^/${extractLanguage()}/players\/([a-zA-Z0-9-_]+)$`);
-
-    newLevelsModule.observe(function search(node) {
+    newLevelsModule.doAfterNodeAppear(`[class*="styles__HolderButton"][href*="/${extractLanguage()}/players/"]:not([data-processed])`, (node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
-            if (node.hasAttribute('data-processed')) return;
-            const href = node.getAttribute('href');
             let doubleParent = node?.parentElement?.parentElement
             if (!doubleParent) return;
-            const hasContainer = doubleParent.matches('[class*="styles__PlayersListContainer-"]') || doubleParent.matches('[class*="styles__SectionContainer"]');
 
-            if (href && targetHrefPattern.test(href) && hasContainer) {
+            const href = node.getAttribute('href');
+            if (href && targetHrefPattern.test(href)) {
                 newLevelsModule.processedNode(node);
                 callback(node);
-                return;
             }
-            node.childNodes.forEach(search);
         }
     })
 }

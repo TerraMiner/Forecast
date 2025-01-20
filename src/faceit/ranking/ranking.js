@@ -49,13 +49,13 @@ function insertAllLevelsToTable(currentLevel) {
     levelIcons.forEach((icon, level) => {
         const node = document.getElementById(`level-node-${level}`);
         const span = node.getElementsByTagName("span")[0];
-        rankingModule.appendToAndHide(icon,span)
+        rankingModule.appendToAndHide(icon, span)
         if (level === currentLevel) {
             let svgNode = icon.cloneNode(true)
             let svgSpan = svgNode.getElementsByTagName("span")[0];
             svgSpan.style.width = "36px";
             svgSpan.style.height = "36px";
-            rankingModule.appendToAndHide(svgNode,document.getElementById("current-level").getElementsByTagName("span")[0])
+            rankingModule.appendToAndHide(svgNode, document.getElementById("current-level").getElementsByTagName("span")[0])
         }
     })
 }
@@ -66,7 +66,7 @@ const rankingModule = new Module("ranking", async () => {
 
     doAfterStatisticNodeAppear(async (node) => {
         let newNode = getHtmlResource("src/visual/tables/level-progress-table.html").cloneNode(true)
-        rankingModule.appendToAndHide(newNode,node)
+        rankingModule.appendToAndHide(newNode, node)
         rankingModule.removalNode(newNode)
         await insertAllStatisticToNewTable();
     })
@@ -75,7 +75,7 @@ const rankingModule = new Module("ranking", async () => {
 async function insertAllStatisticToNewTable() {
     let gameType = extractGameType()
     let playerNickName = extractPlayerNick();
-    let playerStatistic = await getPlayerStatsByNickName(playerNickName);
+    let playerStatistic = await fetchPlayerStatsByNickName(playerNickName);
     let gameStats = playerStatistic["games"][gameType];
     let elo = parseInt(gameStats["faceit_elo"], 10);
     let currentLevel = getLevel(elo, gameType);
@@ -161,21 +161,24 @@ function doAfterStatisticNodeAppear(callback) {
     let found = !!document.getElementById("forecast-statistic-table")
     let removed = !!document.getElementById("hided-enchancer-table")
 
-    rankingModule.observe(function search(node) {
+    let playerStatsContainerObserverId = "search-player-statistic-container"
+    rankingModule.observe(playerStatsContainerObserverId, function search(node) {
         if (found) return;
         if (node.nodeType === Node.ELEMENT_NODE) {
             let baseElement = document.querySelector('[class*=styles__ContentLayoutGrid]')
             if (baseElement) {
-                baseElement.setAttribute("player-statistic-container","")
+                baseElement.setAttribute("player-statistic-container", "")
                 callbackTable(baseElement)
                 found = true;
+                rankingModule.releaseObserver(playerStatsContainerObserverId)
                 return;
             }
             node.childNodes.forEach(search);
         }
     })
 
-    rankingModule.observe(function searchForRemove(node) {
+    let otherStatsTableObserverId = "search-other-statistic-table";
+    rankingModule.observe(otherStatsTableObserverId, function searchForRemove(node) {
         if (removed) return;
         if (node.nodeType === Node.ELEMENT_NODE) {
             let parent = node?.parentElement?.parentElement
@@ -183,6 +186,7 @@ function doAfterStatisticNodeAppear(callback) {
                 hideNode(parent)
                 parent.id = "hided-enchancer-table"
                 removed = true
+                rankingModule.releaseObserver(otherStatsTableObserverId)
                 return;
             }
             node.childNodes.forEach(searchForRemove);
