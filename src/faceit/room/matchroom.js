@@ -101,7 +101,8 @@ async function findUserCard(playerId, callback) {
 
 
 async function calculateStats(team, playerId, matchAmount) {
-    let data = await fetchPlayerInGameStats(playerId, "cs2", matchAmount);
+    let gameType = extractGameType()
+    let data = await fetchPlayerInGameStats(playerId, gameType, matchAmount);
 
     if (!data.items || data.items.length === 0) {
         return;
@@ -194,7 +195,7 @@ function addRow(nameTable, map, games, winPercent) {
     const gamesCell = newRow.insertCell(1);
     const winrateCell = newRow.insertCell(2);
 
-    mapCell.innerHTML = map;
+    mapCell.innerHTML = map.replace("de_","").replace(/(\d)/g, " $1").toLocaleUpperCase();
     gamesCell.innerHTML = games;
     winrateCell.innerHTML = winPercent + "%";
 
