@@ -131,7 +131,7 @@ const newLevelsModule = new Module("levels", async () => {
                 return "collections";
             case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)(\/.*)?$/.test(url):
                 return "profile";
-            case /^https:\/\/www\.faceit\.com\/\w+\/cs2\/room\/[\w\-]+(\/.*)?$/.test(url):
+            case /^https:\/\/www\.faceit\.com\/\w+\/[\w\-]+\/room\/[\w\-]+(\/.*)?$/.test(url):
                 return "matchroom";
             case /^https:\/\/www\.faceit\.com\/\w+\/matchmaking.*/.test(url):
                 return "matchmaking";
