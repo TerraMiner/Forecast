@@ -4,11 +4,12 @@ This project is a browser extension that retrieves and displays statistics for F
 
 ## Features
 
-- Fetch match statistics.
+- Extend match statistics.
 - Display win rates for teams in a match.
 - Calculate player stats and display them on user cards.
 - Introduced new Faceit Skill Levels with a more detailed breakdown by elo.
 - Display specific statistics in match history (Score, HLTV 2.0 rating, K/D, K/R, ADR)
+- Allows you to see the tab information of the match, without having to follow the link
 
 ## Download
 - [Chrome Store](https://chromewebstore.google.com/detail/faceit-forecast/mpkkcddegpblmobincjkbpgfcbejjbcp)
@@ -17,19 +18,17 @@ This project is a browser extension that retrieves and displays statistics for F
 
 ## Screenshots
 
-![image](https://github.com/user-attachments/assets/8b50b0a0-7cf3-4dd9-86fa-4603f102e331)
+![image](https://github.com/user-attachments/assets/1cbe8e58-25a9-441f-bae2-d261daebd644)
 
-![image](https://github.com/user-attachments/assets/d5365846-14bd-4e81-b81b-39fb3d74f8bf)
+![image](https://github.com/user-attachments/assets/4cf00a20-0ed7-40e6-b422-2b79dbefe0a3)
 
-![image](https://github.com/user-attachments/assets/04b92189-99ce-4244-b210-3cde13db2c27) ![image](https://github.com/user-attachments/assets/afcde6c0-bf5f-4c18-b6a2-345f571d2b98)
+![image](https://github.com/user-attachments/assets/e937e56b-de65-44f4-ab71-4fba738eccc2)
 
-![image](https://github.com/user-attachments/assets/b0f6bc36-9e2f-46f4-a8dc-f50a9c98c2fd)
+![image](https://github.com/user-attachments/assets/b2c1c7a9-2000-4fe0-93f2-e11a8b259b84)
 
-![image](https://github.com/user-attachments/assets/05492a4e-ccf8-4df4-8a9d-57c5211d44b0)
+![image](https://github.com/user-attachments/assets/473d2e44-a34c-4bf6-a58d-0a26b537581a)
 
-![image](https://github.com/user-attachments/assets/396e5e19-c9a2-4f72-b5b1-255a1812329c)![image](https://github.com/user-attachments/assets/0db7ad7e-0a8c-4fd1-b870-edbb106c541d)
-![image](https://github.com/user-attachments/assets/fd93fe4b-97a3-46d0-8df5-8fedea0a3386)
-![image](https://github.com/user-attachments/assets/86f72b33-38c7-4546-a7e0-2fb580dccec1)![image](https://github.com/user-attachments/assets/338d6331-06f7-42d7-a50e-cc9da99def37)
+![image](https://github.com/user-attachments/assets/04de3ba6-1d92-416d-9cc6-883a0a622ad2)
 
 ## License
 
