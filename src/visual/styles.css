@@ -53,22 +53,9 @@ h1 {
     border-bottom: 1px solid #444;
 }
 
-label, a {
+label {
     font-size: 16px;
     flex-shrink: 0;
-    margin-right: 10px;
-}
-
-a {
-    color: #ff5500;
-    text-decoration: none;
-}
-
-a:visited,
-a:hover,
-a:active {
-    color: #ff5500;
-    text-decoration: none;
 }
 
 input[type="text"] {
@@ -203,9 +190,10 @@ input[type="text"]:focus {
 }
 
 #sliderValue {
-    font-size: 1rem;
+    font-size: 16px;
     color: #FFFFFF;
-    text-align: left;
+    text-align: center;
+    min-width: 36px;
 }
 
 input:checked + .slider {
@@ -214,4 +202,32 @@ input:checked + .slider {
 
 input:checked + .slider:before {
     transform: translateX(26px);
+}
+
+.notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: green;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    display: none;
+    font-size: 16px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.notification.show {
+    display: block;
+    opacity: 1;
+}
+
+#copyButton {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
 }

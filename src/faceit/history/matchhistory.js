@@ -1,12 +1,12 @@
 const MATCHES_PER_LOAD = 30;
 const matchIds = [];
 const matchDetailedDatas = new Map();
-const preloadingIds = new Set();
+const loadingMatches = new Set();
+const loadedIdAnchors = new Set();
 const matchNodesByMatchStats = [];
 
 class MatchNodeByMatchStats {
     constructor(node, index) {
-        this.popup = null;
         this.node = node;
         this.matchStats = null;
         this.rounds = 0;
@@ -147,7 +147,7 @@ const matchHistoryModule = new Module("matchhistory", async () => {
                 lastIndex = index + 1;
                 batch.push(new MatchNodeByMatchStats(node, index));
             }
-            //todo add queue to request matches
+
             await loadPlayerMatchHistory(playerId, batchIndex - 1, () => {
                 loadDetailedMatches(batchIndex)?.then(() => {
                     Promise.all(batch.map(node => node.loadMatchStats(playerId)))
@@ -159,7 +159,8 @@ const matchHistoryModule = new Module("matchhistory", async () => {
     matchNodesByMatchStats.length = 0;
     matchIds.length = 0;
     matchDetailedDatas.clear()
-    preloadingIds.clear()
+    loadingMatches.clear()
+    loadedIdAnchors.clear()
 });
 
 function insertStatsIntoNode(matchNode, rating, k, d, kd, kr, adr, playerId, detailedMatchInfo) {
@@ -176,13 +177,14 @@ function insertStatsIntoNode(matchNode, rating, k, d, kd, kr, adr, playerId, det
 
     insertRow(tableTemplate, matchNode.score, rating, k, d, kd, kr, adr, matchNode.isWin);
 
-    if (matchNode.popup === null) {
+    if (!matchNode.popup) {
         matchNode.popup = new MatchroomPopup(tableTemplate)
-        matchNode.popup.attachToElement(tableTemplate, detailedMatchInfo, playerId)
+        matchNode.popup.attachToElement(detailedMatchInfo, playerId)
     }
 
     if (tableNotExist) {
-        appendToAndHide(tableTemplate, fourthNode.querySelector("span"), 'table-template')
+        matchHistoryModule.appendToAndHide(tableTemplate, fourthNode.querySelector("span"), 'table-template')
+        matchHistoryModule.removalNode(tableTemplate)
     }
 }
 
@@ -234,13 +236,9 @@ function insertRow(node, score, rating, k, d, kd, kr, adr, isWin) {
     replaceOrInsertCell(tableRow, 4, () => createColoredDiv(adr, adr >= 75));
 }
 
-async function loadAllPlayerMatches(playerId, from) {
-    const results = await loadPlayerMatches(playerId, MATCHES_PER_LOAD, from);
-    let duplicate = matchIds.find((a) => results.some((b) => a === b))
-    if (duplicate) {
-        console.log(`Duplicate (${from}) ${duplicate}`)
-    }
-
+async function loadAllPlayerMatches(playerId, fromId, date) {
+    loadedIdAnchors.add(fromId);
+    const results = await loadPlayerMatches(playerId, MATCHES_PER_LOAD, date);
     results.forEach(id => matchIds.push(id));
 }
 
@@ -258,15 +256,15 @@ function findPlayerInTeamById(teams, playerId) {
 }
 
 async function loadPlayerMatchHistory(playerId, fromId, callback) {
-    if (matchIds.length === 0) {
-        await loadAllPlayerMatches(playerId, 0).then(callback)
-        return
+    if (matchIds.length === 0 && loadedIdAnchors.size === 0) {
+        await loadAllPlayerMatches(playerId, fromId, 0).then(callback)
+        if (loadedIdAnchors.has(fromId)) return
     }
 
     matchHistoryModule.doAfter(() => matchIds[fromId], (matchId) => {
         fetchMatchStats(matchId).then(match => {
             let from = match["finished_at"];
-            loadAllPlayerMatches(playerId, parseInt(from, 10) * 1000).then(callback)
+            loadAllPlayerMatches(playerId, from, parseInt(from, 10) * 1000).then(callback)
         })
     }, 50)
 }
@@ -278,11 +276,11 @@ function loadDetailedMatches(fromId) {
 
     for (let i = fromId; i < toId; i++) {
         const matchId = matchIds[i];
-        if (preloadingIds.has(matchId) || matchDetailedDatas.has(matchId)) continue;
+        if (loadingMatches.has(matchId) || matchDetailedDatas.get(matchId)) continue;
         batch.push(getFromCacheOrFetch(matchId, fetchMatchStatsDetailed)
             .then(result => matchDetailedDatas.set(matchId, result))
-            .finally(() => preloadingIds.delete(matchId)));
-        preloadingIds.add(matchId);
+            .finally(() => loadingMatches.delete(matchId)));
+        loadingMatches.add(matchId);
     }
 
     return Promise.all(batch);

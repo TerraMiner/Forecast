@@ -46,51 +46,58 @@ class Module {
 
     #generateSessionId() {
         this.sessionId = Math.random().toString(36).substring(2, 10);
+        this.dataProcessedAttribute = `data-processed-${this.sessionId}`
     }
 
     #releaseCaches() {
-        this.observerTasks.clear();
-        if (this.observer) {
-            this.observer.disconnect()
-        }
+        requestAnimationFrame(() => {
+            this.observerTasks.clear();
+            if (this.observer) {
+                this.observer.disconnect()
+            }
 
-        this.processedNodes.forEach((node) => {
-            node?.removeAttribute('data-processed')
+            this.processedNodes.forEach((node) => {
+                node?.removeAttribute(this.dataProcessedAttribute)
+            });
+            this.processedNodes.length = 0;
+
+            for (let i = 0; i < this.nodesToRemove.length; i++) {
+                this.nodesToRemove[i]?.remove();
+            }
+            this.nodesToRemove.length = 0;
+
+            this.hidedNodes.forEach((node) => {
+                node?.style?.removeProperty('display')
+            });
+            this.hidedNodes.length = 0
+
+            this.tasks.forEach((task) => {
+                clearInterval(task)
+            })
+            this.tasks.length = 0
         });
-        this.processedNodes.length = 0;
-
-        this.nodesToRemove.forEach((node) => {
-            node?.remove()
-        })
-        this.nodesToRemove.length = 0
-
-        this.hidedNodes.forEach((node) => {
-            node?.style?.removeProperty('display')
-        });
-        this.hidedNodes.length = 0
-
-        this.tasks.forEach((task) => {
-            clearInterval(task)
-        })
-        this.tasks.length = 0
     }
 
-    processedNode(node) {
+    processedNode(node, attribute = this.dataProcessedAttribute) {
         this.processedNodes.push(node)
-        node.setAttribute('data-processed', '')
+        node.setAttribute(attribute, '')
+    }
+
+    isProcessedNode(node, attribute = this.dataProcessedAttribute) {
+        return node.hasAttribute(attribute)
     }
 
     removalNode(node) {
         this.nodesToRemove.push(node)
     }
 
-    appendToAndHide(sourceNode,hiddenNode) {
-        appendToAndHide(sourceNode,hiddenNode)
+    appendToAndHide(sourceNode, hiddenNode) {
+        appendToAndHide(sourceNode, hiddenNode)
         this.hidedNodes.push(hiddenNode)
     }
 
-    preppendToAndHide(sourceNode,hiddenNode) {
-        preppendToAndHide(sourceNode,hiddenNode)
+    preppendToAndHide(sourceNode, hiddenNode) {
+        preppendToAndHide(sourceNode, hiddenNode)
         this.hidedNodes.push(hiddenNode)
     }
 
@@ -150,8 +157,8 @@ class Module {
         return () => clearInterval(task)
     }
 
-    observe(id,task) {
-        this.observerTasks.set(id,task)
+    observe(id, task) {
+        this.observerTasks.set(id, task)
     }
 
     releaseObserver(id) {
@@ -180,7 +187,7 @@ class Module {
     async doAfterNodeAppear(selector, callback) {
         let element = document.querySelector(selector);
         if (element) await callback(element)
-        this.observe(selector,async () => {
+        this.observe(selector, async () => {
             let element = document.querySelector(selector);
             if (element) await callback(element);
         });
@@ -191,7 +198,7 @@ class Module {
         if (elements.length !== 0) for (const element of elements) {
             await callback(element);
         }
-        this.observe(selector,async () => {
+        this.observe(selector, async () => {
             let elements = document.querySelectorAll(selector);
             for (const element of elements) {
                 if (element) await callback(element);
@@ -202,7 +209,7 @@ class Module {
     async doAfterAllNodeAppearPack(selector, callback) {
         let elements = document.querySelectorAll(selector);
         if (elements.length !== 0) await callback(elements)
-        this.observe(selector,async () => {
+        this.observe(selector, async () => {
             let elements = document.querySelectorAll(selector);
             if (elements.length !== 0) await callback(elements);
         });

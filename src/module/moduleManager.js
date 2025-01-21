@@ -7,7 +7,7 @@ const regexModules = [
     {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats(\/.*)?$/, module: matchHistoryModule}
 ]
 
-resourcesModule.produceOf("load").then(async () => {
+resourcesModule.produceOf("load").then(() => {
     setInterval(async function () {
         let currentUrl = window.location.href;
         if (currentUrl !== previousUrl) {
@@ -29,8 +29,10 @@ function determineAction(regex, currentUrl, previousUrl) {
 }
 
 async function handleModules(currentUrl, previousUrl) {
-    for (const {regex, module} of regexModules) {
-        const action = determineAction(regex, currentUrl, previousUrl);
-        if (action) await module.produceOf(action)
+    let batch = []
+    for (let regexModule of regexModules) {
+        const action = determineAction(regexModule.regex, currentUrl, previousUrl);
+        if (action) batch.push(regexModule.module.produceOf(action))
     }
+    await Promise.all(batch)
 }

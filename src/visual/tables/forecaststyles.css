@@ -133,33 +133,27 @@
 }
 
 .show-popup-button-wrap:hover .popup-wrapper {
-    opacity: 1;
-    transform: translateY(0);
+    display: block;
     pointer-events: auto;
 }
 
 .popup-wrapper:focus-within .popup-wrapper {
-    opacity: 1;
-    transform: translateY(0);
+    display: block;
 }
 
 .popup-wrapper {
     position: relative !important;
     z-index: 3 !important;
     pointer-events: none;
-    opacity: 0;
-    transform: translateY(-5px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    display: none;
 }
 
 .popup-tooltip {
     display: flex !important;
     flex-direction: column !important;
-    gap: 5px !important;
+    gap: 12px !important;
     position: absolute;
-    left: 100%;
     transform: translateY(-50%);
-    z-index: 9999;
 }
 
 .popup-scoreboard-table {
@@ -168,7 +162,7 @@
     border-collapse: separate !important;
     border-spacing: 0 !important;
     border-radius: 8px !important;
-    font-size: 12px !important;
+    font-size: 14px !important;
     background-color: #1A1A1A !important;
     min-width: 0 !important;
     overflow: hidden !important;
@@ -191,6 +185,10 @@
     border: none !important;
     background-color: transparent !important;
     color: #fff;
+}
+
+.popup-table-header .popup-table-cell:first-child {
+    min-width: 110px
 }
 
 .level-progress-container {

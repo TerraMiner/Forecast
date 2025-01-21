@@ -167,6 +167,23 @@ document.addEventListener("DOMContentLoaded", async () => {
                 await saveSettings();
             });
         }
+
+        let nitificationTimeOut = null
+
+        document.getElementById('copyButton').addEventListener('click', () => {
+            navigator.clipboard.writeText("forecast.extension@gmail.com").then(() => {
+                const notification = document.getElementById('notification');
+                notification.classList.add('show');
+
+                if (nitificationTimeOut) clearTimeout(nitificationTimeOut);
+
+                nitificationTimeOut = setTimeout(() => {
+                    notification.classList.remove('show');
+                    nitificationTimeOut = null
+                }, 2000);
+            });
+        });
+
     } catch (error) {
         console.error("Error during DOMContentLoaded:", error);
     }

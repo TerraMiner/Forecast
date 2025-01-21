@@ -58,7 +58,6 @@ function replaceOrInsertCell(row, index, contentCreator) {
         cell.innerHTML = '';
     }
 
-    // Добавляем контент в ячейку
     cell.appendChild(contentCreator());
 }
 
@@ -74,7 +73,7 @@ function chunkArray(arr, size) {
     return result;
 }
 
-async function getSliderValue() {
+async function getMatchAmount() {
     return new Promise((resolve, reject) => {
         const storageAPI = browserType === FIREFOX ? browser.storage.sync : chrome.storage.sync;
 

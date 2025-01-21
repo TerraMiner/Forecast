@@ -2,43 +2,23 @@ class MatchroomPopup {
     constructor(table) {
         this.wrapper = table.querySelector("[class=popup-wrapper]");
         this.popup = this.wrapper.children[0];
-        this.isAttached = false;
-        this.stats = null;
     }
 
-    attachToElement(element, matchStatistic, playerId) {
-        if (this.isAttached) return;
-
-        this.playerId = playerId;
-        this.stats = matchStatistic;
-
-        const popupContainer = element.querySelector('.show-popup-button-wrap');
-        this.setupStats();
-        popupContainer.appendChild(this.wrapper);
-
-        this.isAttached = true;
-    }
-
-    setupStats() {
+    attachToElement(stats, playerId) {
         const sortByKills = (players) => players.sort((a, b) => b.player_stats["Kills"] - a.player_stats["Kills"]);
-
         const teams = [
-            sortByKills(this.stats.rounds[0].teams[0].players),
-            sortByKills(this.stats.rounds[0].teams[1].players),
+            sortByKills(stats.rounds[0].teams[0].players),
+            sortByKills(stats.rounds[0].teams[1].players),
         ];
 
         const tables = [
-            this.popup.querySelector(`#team-table-popup-1`),
-            this.popup.querySelector(`#team-table-popup-2`),
+            this.popup.querySelector(`#team-table-body-popup-1`),
+            this.popup.querySelector(`#team-table-body-popup-2`),
         ];
 
-        const rowTemplate = document.createElement("tr");
-        rowTemplate.classList.add("popup-table-row");
-        const cellTemplate = document.createElement("td");
-        cellTemplate.classList.add("popup-table-cell");
-
         const createRow = (playerStats) => {
-            const row = rowTemplate.cloneNode(true);
+            const row = document.createElement("tr");
+            row.className = "popup-table-row"
             const stats = playerStats["player_stats"];
             const data = [
                 playerStats.nickname,
@@ -54,8 +34,9 @@ class MatchroomPopup {
             ];
 
             data.forEach((value, index) => {
-                const cell = cellTemplate.cloneNode(true);
-                if (index === 0 && this.playerId === playerStats.player_id) {
+                let cell = document.createElement("td");
+                cell.className = "popup-table-cell"
+                if (index === 0 && playerId === playerStats.player_id) {
                     cell.style.color = "#FF5500FF";
                     cell.style.fontWeight = "bold";
                 }

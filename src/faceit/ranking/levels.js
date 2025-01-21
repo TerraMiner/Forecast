@@ -133,7 +133,7 @@ const newLevelsModule = new Module("levels", async () => {
                 return "profile";
             case /^https:\/\/www\.faceit\.com\/\w+\/cs2\/room\/[\w\-]+(\/.*)?$/.test(url):
                 return "matchroom";
-            case /^https:\/\/www\.faceit\.com\/\w+\/matchmaking$/.test(url):
+            case /^https:\/\/www\.faceit\.com\/\w+\/matchmaking.*/.test(url):
                 return "matchmaking";
             default:
                 return null;
