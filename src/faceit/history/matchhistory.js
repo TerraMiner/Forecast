@@ -61,13 +61,13 @@ class MatchNodeByMatchStats {
 
     setupMatchCounterArrow() {
         let matchNumber = (this.index + 1)
-        if (matchNumber % 20 !== 0) return
-        let arrowId = `arrow-${matchNumber / 20}`
+        if (matchNumber % 30 !== 0) return
+        let arrowId = `arrow-${matchNumber / 30}`
         const arrow = getHtmlResource("src/visual/tables/match-counter-arrow.html").cloneNode(true);
         arrow.id = arrowId
         let idCounter = 0
         for (let child of this.node.children) {
-            let borderId = `border-${matchNumber / 20}-${idCounter++}`
+            let borderId = `border-${matchNumber / 30}-${idCounter++}`
             if (document.getElementById(borderId)) continue
 
             child.style.position = "relative";
