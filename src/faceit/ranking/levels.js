@@ -160,6 +160,7 @@ const newLevelsModule = new Module("levels", async () => {
             let newIcon = levelIcons.get(currentLevel).cloneNode(true).firstChild;
             newIcon.id = `${levelIconId}${currentLevel}`;
             appendTo(newIcon, eloNodeParent);
+            newLevelsModule.removalNode(newIcon);
         });
     } else if (lobbyType === "profile") {
         let selector = '[class*="styles__TitleContainer-"]';
