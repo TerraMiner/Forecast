@@ -29,7 +29,7 @@ function determineAction(regex, currentUrl, previousUrl) {
 }
 
 async function handleModules(currentUrl, previousUrl) {
-    let batch = []
+    let batch = [];
     for (let regexModule of regexModules) {
         const action = determineAction(regexModule.regex, currentUrl, previousUrl);
         if (action) batch.push(regexModule.module.produceOf(action))

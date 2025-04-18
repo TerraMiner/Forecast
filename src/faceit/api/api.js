@@ -112,7 +112,7 @@ function extractMatchId() {
 
 function extractLanguage() {
     const url = window.location.href;
-    const match = url.match(/https:\/\/www\.faceit\.com\/([^/]+)\//);
+    const match = url.match(/https:\/\/www\.faceit\.com\/([^/]+)\/?/);
     return match ? match[1] : null;
 }
 

@@ -384,8 +384,9 @@ async function insertStatsToEloBar(nick) {
 }
 
 function doAfterSearchPlayerNodeAppear(callback) {
-    const targetHrefPattern = new RegExp(`^/${extractLanguage()}/players\/([a-zA-Z0-9-_]+)$`);
-    newLevelsModule.doAfterNodeAppear(`[class*="styles__HolderButton"][href*="/${extractLanguage()}/players/"]:not([${newLevelsModule.dataProcessedAttribute}])`, (node) => {
+    let language = extractLanguage()
+    const targetHrefPattern = new RegExp(`^/${language}/players\/([a-zA-Z0-9-_]+)$`);
+    newLevelsModule.doAfterNodeAppear(`[class*="styles__HolderButton"][href*="/${language}/players/"]:not([${newLevelsModule.dataProcessedAttribute}])`, (node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
             let doubleParent = node?.parentElement?.parentElement
             if (!doubleParent) return;
