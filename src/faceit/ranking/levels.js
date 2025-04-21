@@ -205,6 +205,9 @@ const newLevelsModule = new Module("levels", async () => {
         let currentLevel = getLevel(elo, gameType);
         let iconSelector = '[class*="SkillIcon__StyledSvg"],[class*="BadgeHolder__Holder"]';
         await newLevelsModule.doAfterNodeAppear(iconSelector, (node) => {
+            if (!node.parentElement?.matches || !node.parentElement?.matches(`[class*=style__LevelHolder]`)) return;
+            if (!node.parentElement?.parentElement?.matches || !node.parentElement?.parentElement?.matches(`[class*=style__Wrapper]`)) return;
+            if (!node.parentElement?.parentElement?.parentElement?.matches || !node.parentElement?.parentElement?.parentElement?.matches(`[class*=styles__StatsGraphPanelWrapper]`)) return;
             if (node.parentElement.parentElement.querySelector(`[class*='${newEloLevelIconId}']`)) return;
 
             let icon = levelIcons.get(currentLevel).cloneNode(true).firstChild

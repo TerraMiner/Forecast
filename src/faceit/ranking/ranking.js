@@ -146,6 +146,7 @@ function getBarProgress(elo, gameType) {
 
 function doAfterStatisticNodeAppear(callback) {
     rankingModule.doAfterNodeAppear('[class*=styles__ContentLayoutGrid] > div > div:nth-child(2)', (node) => {
+        if (!node.parentElement?.parentElement?.parentElement?.matches || node.parentElement?.parentElement?.parentElement?.matches("[class*=SpotlightSearch__Content]")) return
         if (node.nodeType === Node.ELEMENT_NODE && !node.querySelector(`[class~="forecast-statistic-table-${rankingModule.sessionId}"]`)) {
             let newNode = document.createElement("div")
             preppendTo(newNode, node);
