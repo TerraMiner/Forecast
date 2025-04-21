@@ -1,6 +1,6 @@
 class MatchroomPopup {
     constructor(table) {
-        this.wrapper = table.querySelector("[class=popup-wrapper]");
+        this.wrapper = table.querySelector("[class~=popup-wrapper]");
         this.popup = this.wrapper.children[0];
     }
 

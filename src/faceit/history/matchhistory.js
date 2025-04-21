@@ -95,7 +95,7 @@ class MatchNodeByMatchStats {
                 el.style.zIndex = "2";
             });
 
-            arrow.querySelector("[class=match-counter-arrow-square]").innerText = matchNumber;
+            arrow.querySelector("[class~=match-counter-arrow-square]").innerText = matchNumber;
         }
     }
 }
@@ -119,11 +119,7 @@ const matchHistoryModule = new Module("matchhistory", async () => {
         let nodesArr = [...nodes].filter((e) => !e.parentNode.parentNode.parentNode.parentNode.parentNode.parentElement.hasAttribute("marked-as-bug"));
         let attempts = attempt ? attempt : 0;
         if (nodesArr.length === 0) {
-            if (attempts > 10) {
-                println("Retries out of limit! Aborting")
-                return
-            }
-            println("retry in 100ms...")
+            if (attempts > 10) return
             setTimeout(async () => await callback(nodes, attempts + 1), 100);
             return
         }

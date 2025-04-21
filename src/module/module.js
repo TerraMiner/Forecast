@@ -58,7 +58,8 @@ class Module {
             this.processedNodes.length = 0;
 
             for (let i = 0; i < this.nodesToRemove.length; i++) {
-                this.nodesToRemove[i]?.remove();
+                let node = this.nodesToRemove[i];
+                node?.remove();
             }
             this.nodesToRemove.length = 0;
 
@@ -194,11 +195,10 @@ class Module {
             }
             return
         }
-        this.doAfter(() => document.getElementById("canvas-body")?.parentNode?.querySelector("[role*='dialog']"),
-            (result) => {
-                let toMark = document.getElementById("canvas-body");
-                if (toMark.hasAttribute("marked-as-bug")) return
-                toMark.setAttribute("marked-as-bug",'');
-            }, 100);
+        this.doAfterNodeAppear('[role="dialog"][data-dialog-type="LEAF"]', () => {
+            let toMark = document.getElementById("canvas-body");
+            if (toMark.hasAttribute("marked-as-bug")) return
+            toMark.setAttribute("marked-as-bug",'');
+        });
     }
 }

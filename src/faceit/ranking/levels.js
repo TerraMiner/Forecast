@@ -81,13 +81,13 @@ class PartySlot {
             if (!oldIcon) return;
             let currentLevel = getLevel(elo, "cs2");
             let newIcon = levelIcons.get(currentLevel).cloneNode(true).firstChild
-            newIcon.id = `party-slot-icon-${this.id}`
+            newIcon.classList.add(`party-slot-icon-${this.id}`)
             if (this.newIcon) {
                 this.newIcon.remove()
                 this.newIcon = null
                 this.isEmpty = true
             }
-            if (document.getElementById(`party-slot-icon-${this.id}`)) return
+            if (levelNode.querySelector(`[class~=party-slot-icon-${this.id}]`)) return
             newLevelsModule.appendToAndHide(newIcon, oldIcon)
             newLevelsModule.removalNode(newIcon)
             this.newIcon = newIcon
@@ -107,19 +107,6 @@ const newLevelsModule = new Module("levels", async () => {
     styleElement.textContent = `span[id*="lvlicon"]:has(+ [class*="SkillIcon__StyledSvg"]) {margin-inline-end: 0 !important;}`;
     document.head.appendChild(styleElement);
 
-    await newLevelsModule.doAfterNodeAppear('div[class*="FriendsMenu__FriendsListHolder"]', async (el) => {
-       newLevelsModule.doAfter(() => {
-           let childs = el.children
-           return childs.length > 1
-       }, () => {
-           let arr = el.children
-           let elem = arr[1].children[0].querySelector('[class*="styles__HolderButton"]').children[1].children[1]
-           newLevelsModule.doAfter(() => arr[1].children[0].querySelector('[class*="styles__HolderButton"]').children[1].children[1], (elem1) => {
-               console.log(elem1)
-           })
-       }, 100)
-    });
-
     await newLevelsModule.doAfterNodeAppear('div[class*="Content__StyledContentElement"][data-dialog-type="TRAY"]:not([marked-as-bug])', async (element) => {
         let uniqueCheck = () => element?.parentElement?.querySelector('[id*="statistic-progress-bar"]')
         if (!uniqueCheck()) {
@@ -131,7 +118,7 @@ const newLevelsModule = new Module("levels", async () => {
                 newTable.id = "statistic-progress-bar"
                 preppendTo(newTable, target, 'progress-bar')
                 newLevelsModule.removalNode(newTable)
-                await insertStatsToEloBar(nick)
+                await insertStatsToEloBar(nick, newTable)
             })
         }
     })
@@ -178,7 +165,7 @@ const newLevelsModule = new Module("levels", async () => {
     } else if (lobbyType === "profile") {
         let selector = '[class*="styles__TitleContainer-"]';
         await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
-            let uniqueCheck = () => document.getElementById(newEloLevelIconId) || node.querySelector(`[id*='${newEloLevelIconId}']`)
+            let uniqueCheck = () => node.querySelector(`[class*='${newEloLevelIconId}']`)
             if (uniqueCheck()) return;
             await newLevelsModule.doAfterAsync(() => node.children.length >= 2 && node.querySelector('svg'), async () => {
                 if (uniqueCheck()) return
@@ -189,18 +176,18 @@ const newLevelsModule = new Module("levels", async () => {
                 let playerStatistic = await fetchPlayerStatsByNickName(nick);
                 let {gameStats, gameType} = getStatistic(playerStatistic)
                 if (!gameStats) return
-                if (document.getElementById(newEloLevelIconId)) return
+                if (node.querySelector(`[class*='${newEloLevelIconId}'`)) return
                 if (!gameStats) return
                 let elo = parseInt(gameStats["faceit_elo"], 10);
                 let currentLevel = getLevel(elo, gameType);
                 let icon = levelIcons.get(currentLevel).cloneNode(true).firstChild
-                icon.id = newEloLevelIconId
+                icon.classList.add(newEloLevelIconId)
                 if (isTopIcon) {
                     let parentElement = badgeHolder.parentElement;
                     parentElement.appendChild(icon)
                     parentElement.style.flexDirection = "row"
                 } else {
-                    if (document.getElementById(newEloLevelIconId)) return
+                    if (node.querySelector(`[class*='${newEloLevelIconId}'`)) return
                     newLevelsModule.appendToAndHide(icon, svgNode)
                     newLevelsModule.removalNode(icon);
                 }
@@ -218,10 +205,10 @@ const newLevelsModule = new Module("levels", async () => {
         let currentLevel = getLevel(elo, gameType);
         let iconSelector = '[class*="SkillIcon__StyledSvg"],[class*="BadgeHolder__Holder"]';
         await newLevelsModule.doAfterNodeAppear(iconSelector, (node) => {
-            if (document.getElementById(newEloLevelIconId) || node.parentElement.parentElement.querySelector(`[id*='${newEloLevelIconId}']`)) return;
+            if (node.parentElement.parentElement.querySelector(`[class*='${newEloLevelIconId}']`)) return;
 
             let icon = levelIcons.get(currentLevel).cloneNode(true).firstChild
-            icon.id = newEloLevelIconId
+            icon.classList.add(newEloLevelIconId)
             newLevelsModule.removalNode(icon);
             if (lobbyType === "stats") {
                 icon.style.width = '48px';
@@ -241,26 +228,26 @@ const newLevelsModule = new Module("levels", async () => {
         })
         let progressBarSelector = '[class*="ProgressBar__ProgressHolder"]'
         await newLevelsModule.doAfterNodeAppear(progressBarSelector, async (node) => {
-            if (document.getElementById(masterProgressBarId) || node.parentElement.parentElement.parentElement.parentElement.querySelector(`[id*='${masterProgressBarId}']`)) return;
+            if (node.parentElement.parentElement.parentElement.parentElement.querySelector(`[class~='${masterProgressBarId}']`)) return;
 
             let section = node.parentElement.parentElement.parentElement
 
             let newTable = getHtmlResource("src/visual/tables/elo-progress-bar-master.html").cloneNode(true)
             newLevelsModule.appendToAndHide(newTable, section)
             newLevelsModule.removalNode(newTable)
-            newTable.id = masterProgressBarId
+            newTable.classList.add(masterProgressBarId)
 
             let {min: currmin} = levelRanges[currentLevel - 1]
             let {min: nextmin} = currentLevel === levelRanges.length ? {min: '∞'} : levelRanges[currentLevel]
 
-            document.getElementById("master-progress-bar").style.width = `${progress}%`;
+            newTable.querySelector("[class~=master-progress-bar]").style.width = `${progress}%`;
             let prevLevelIcon = levelIcons.get(currentLevel - 1)?.cloneNode(true)?.firstChild
             let nextLevelIcon = levelIcons.get(currentLevel + 1)?.cloneNode(true)?.firstChild
-            if (prevLevelIcon) newLevelsModule.appendToAndHide(prevLevelIcon, document.getElementById("master-min-icon"))
-            if (nextLevelIcon) newLevelsModule.appendToAndHide(nextLevelIcon, document.getElementById("master-max-icon"))
+            if (prevLevelIcon) newLevelsModule.appendToAndHide(prevLevelIcon, newTable.querySelector("[class~=master-min-icon]"))
+            if (nextLevelIcon) newLevelsModule.appendToAndHide(nextLevelIcon, newTable.querySelector("[class~=master-max-icon]"))
 
-            document.getElementById("master-min-value").textContent = currmin
-            document.getElementById("master-max-value").textContent = nextmin
+            newTable.querySelector("[class~=master-min-value]").textContent = currmin
+            newTable.querySelector("[class~=master-max-value]").textContent = nextmin
         })
     } else if (lobbyType === "matchmaking") {
         let partySlots = new Map();
@@ -354,28 +341,16 @@ function getStatistic(playerStatistic) {
     return {gameStats, gameType}
 }
 
-function findPlayerInTeamByNickname(teams, nickname) {
-    for (let team of [teams["faction1"], teams["faction2"]]) {
-        let player = team["roster"].find(player => player.nickname === nickname);
-        if (player) {
-            return player;
-        }
-    }
-    return null;
-}
-
-async function insertStatsToEloBar(nick) {
+async function insertStatsToEloBar(nick, table) {
     let gameType = "cs2"
     let playerStatistic = await fetchPlayerStatsByNickName(nick);
     let gameStats = playerStatistic["games"][gameType];
-    let userUrlElement = document.getElementById("user-url");
-    if (!userUrlElement) return
-    userUrlElement.setAttribute("href", `/${extractLanguage()}/players/${nick}/stats/${gameType}`)
+    table.setAttribute("href", `/${extractLanguage()}/players/${nick}/stats/${gameType}`)
 
     let elo = parseInt(gameStats["faceit_elo"], 10);
     let currentLevel = getLevel(elo, gameType)
     let progressBarPercentage = getBarProgress(elo, gameType);
-    let node = document.getElementById("skill-current-level")
+    let node = table.querySelector("[class~=skill-current-level]")
     
     while (node.firstChild) {
         node.removeChild(node.firstChild);
@@ -391,14 +366,14 @@ async function insertStatsToEloBar(nick) {
     let levelRanges = gameLevelRanges[gameType];
     let {min, max} = levelRanges[currentLevel - 1]
 
-    document.getElementById("progress-current-elo").getElementsByTagName("elo")[0].innerText = `${elo}`
-    document.getElementById("min-elo-level").innerText = `${min}`
-    document.getElementById("max-elo-level").innerText = `${max === Infinity ? '' : max}`
+    table.querySelector("a > div > div.details > div.flex-between > div.elo.progress-current-elo > div").innerText = `${elo}`
+    table.querySelector("[class~=min-elo-level]").innerText = `${min}`
+    table.querySelector("[class~=max-elo-level]").innerText = `${max === Infinity ? '' : max}`
 
     let isLastLevel = currentLevel === levelRanges.length
-    document.getElementById("elo-to-de-or-up-grade").innerText = `${min - elo - 1}/+${isLastLevel ? "∞" : max - elo + 1}`
+    table.querySelector("[class~=elo-to-de-or-up-grade]").innerText = `${min - elo - 1}/+${isLastLevel ? "∞" : max - elo + 1}`
 
-    const progressBar = document.getElementById(`elo-progress-bar`);
+    const progressBar = table.querySelector("a > div > div.details > div:nth-child(2) > div.progress-container.elo-progress-bar-container > div");
     if (isLastLevel) {
         progressBar.style.width = "100%";
     } else {

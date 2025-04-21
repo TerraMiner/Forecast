@@ -17,12 +17,15 @@ const matchRoomModule = new Module("matchroom", async () => {
 })
 
 
-function setupPlayerCardMatchData(playerId, targetNode) {
+async function setupPlayerCardMatchData(playerId, targetNode) {
+    let tableId = `${matchRoomModule.sessionId}-player-table-${playerId}`
+    if (targetNode.querySelector("[class~=tableId]")) return null
     let htmlResource = getHtmlResource('src/visual/tables/player.html').cloneNode(true);
     targetNode.insertAdjacentElement('beforeend', htmlResource);
-    let table = document.getElementById("player-table")
-    table.id = `${matchRoomModule.sessionId}-player-table-${playerId}`
+    let table = htmlResource.querySelector("[class~=player-table]")
+    table.classList.add(tableId)
     table.closest(`[class*="UserCardPopup__UserCardContainer"]`).style.minHeight = "530px"
+    return table
 }
 
 function calculateTeamMatches(teamMap) {
@@ -39,24 +42,19 @@ function calculateTeamMatches(teamMap) {
     return teamMatches;
 }
 
-function displayTeamMatches(teamNameRaw, teamMatches) {
+function displayTeamMatches(htmlResource,teamNameRaw, teamMatches) {
     const roster = teamNameRaw.split("$").pop()
     const teamName = teamNameRaw.split("$")[0]
-    addTableTeamTitle(roster, teamName);
+    addTableTeamTitle(htmlResource,roster, teamName);
     Object.entries(teamMatches)
         .sort(([, dataA], [, dataB]) => dataB.wins / dataB.totalGames - dataA.wins / dataA.totalGames)
         .forEach(([mapName, data]) => {
             const winrate = (data.wins / data.totalGames * 100).toFixed(0);
-            addRow(roster, mapName, data.totalGames, winrate)
+            addRow(htmlResource.querySelector(`[class~="${roster}"]`), mapName, data.totalGames, winrate)
         });
 }
 
-function displayPlayerStats(playerId, playerStats) {
-    if (!playerStats) {
-        error(`Player stats ${playerId} not found!`);
-        return;
-    }
-
+function displayPlayerStats(playerId, playerStats, table) {
     const {maps} = playerStats;
 
     Array.from(maps.entries())
@@ -64,7 +62,7 @@ function displayPlayerStats(playerId, playerStats) {
             (winsB / totalB) - (winsA / totalA))
         .forEach(([mapName, {totalGames, wins}]) => {
             const winrate = ((wins / totalGames) * 100).toFixed(0);
-            addRow(`${matchRoomModule.sessionId}-player-table-${playerId}`, mapName, totalGames, winrate);
+            addRow(table, mapName, totalGames, winrate);
         });
 }
 
@@ -91,7 +89,7 @@ async function findUserCard(playerId, callback) {
     const match = player.faceit_url.match(/\/players\/[^/]+/);
     const playerLink = "/" + currentCountry + match[0];
 
-    matchRoomModule.doAfterNodeAppear(`[class*="UserCard__Container"]:has(a[href="${playerLink}"])`, (node) => {
+    await matchRoomModule.doAfterNodeAppear(`[class*="UserCard__Container"]:has(a[href="${playerLink}"])`, async (node) => {
         if (!matchRoomModule.isProcessedNode(node)) {
             matchRoomModule.processedNode(node);
             callback(node);
@@ -134,11 +132,12 @@ async function calculateStats(team, playerId, matchAmount) {
         mapData.totalGames += 1;
     });
 
-    await findUserCard(playerId, userCardElement => {
-        setupPlayerCardMatchData(playerId, userCardElement);
+    await findUserCard(playerId, async userCardElement => {
+        let table = await setupPlayerCardMatchData(playerId, userCardElement)
+        if (!table) return;
 
         const playerStats = teamMap.get(playerId);
-        if (playerStats) displayPlayerStats(playerId, playerStats);
+        if (playerStats) displayPlayerStats(playerId, playerStats, table);
     });
 }
 
@@ -159,9 +158,9 @@ async function displayWinRates(matchDetails) {
     await Promise.all([...team1Promises, ...team2Promises]);
     let teamTableNodeId = `${matchRoomModule.sessionId}-team-table`
     await matchRoomModule.doAfterNodeAppear('[name="info"][class*="Overview__Column"]', async (node) => {
-        let existingTeamTableNode = node.querySelector(`[id*="team-table"]`);
+        let existingTeamTableNode = node.querySelector(`[class*="team-table"]`);
         if (existingTeamTableNode) {
-            if (existingTeamTableNode.id === teamTableNodeId) return
+            if (existingTeamTableNode.classList.contains(teamTableNodeId)) return
             else existingTeamTableNode.remove()
         }
         const targetNode = node.matches('[name="info"]') ? node : node.querySelector('[name="info"][class*="Overview__Column"]');
@@ -172,23 +171,22 @@ async function displayWinRates(matchDetails) {
         let innerNode = targetNode.querySelector('[class*="Overview__Stack"]')
         let htmlResource = getHtmlResource('src/visual/tables/team.html').cloneNode(true)
         node.style.overflowBlock = 'unset';
-        htmlResource.id = teamTableNodeId
+        htmlResource.classList.add(teamTableNodeId)
         innerNode.insertAdjacentElement('afterend', htmlResource);
 
         teamCache.forEach((teamMap, teamName) => {
             const teamMatches = calculateTeamMatches(teamMap);
-            displayTeamMatches(teamName, teamMatches);
+            displayTeamMatches(htmlResource, teamName, teamMatches);
         });
     })
 }
 
-function addTableTeamTitle(roster, title) {
-    const titleElement = document.getElementById(roster + "-name")
+function addTableTeamTitle(htmlResource,roster, title) {
+    const titleElement = htmlResource.querySelector(`[class*="${roster}-name"]`)
     titleElement.textContent = title
 }
 
-function addRow(nameTable, map, games, winPercent) {
-    const table = document.getElementById(nameTable).getElementsByTagName('tbody')[0];
+function addRow(table, map, games, winPercent) {
     const newRow = table.insertRow();
 
     const mapCell = newRow.insertCell(0);

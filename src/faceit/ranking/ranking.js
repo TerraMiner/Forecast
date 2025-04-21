@@ -45,9 +45,9 @@ const gameLevelRanges = {
     ]
 };
 
-function insertAllLevelsToTable(currentLevel) {
+function insertAllLevelsToTable(table, currentLevel) {
     levelIcons.forEach((icon, level) => {
-        const node = document.getElementById(`level-node-${level}`);
+        const node = table.querySelector(`[class*=level-node-${level}]`);
         const span = node.getElementsByTagName("span")[0];
         rankingModule.appendToAndHide(icon, span)
         if (level === currentLevel) {
@@ -55,24 +55,28 @@ function insertAllLevelsToTable(currentLevel) {
             let svgSpan = svgNode.getElementsByTagName("span")[0];
             svgSpan.style.width = "36px";
             svgSpan.style.height = "36px";
-            rankingModule.appendToAndHide(svgNode, document.getElementById("current-level").getElementsByTagName("span")[0])
+            rankingModule.appendToAndHide(svgNode, table.querySelector("[class*=current-level]").getElementsByTagName("span")[0])
         }
     })
 }
 
+let unsubscribe;
 const rankingModule = new Module("ranking", async () => {
     const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking");
     if (!enabled) return;
     rankingModule.temporaryFaceitBugFix();
     doAfterStatisticNodeAppear(async (node) => {
         let newNode = getHtmlResource("src/visual/tables/level-progress-table.html").cloneNode(true)
-        rankingModule.appendToAndHide(newNode, node)
-        rankingModule.removalNode(newNode)
-        await insertAllStatisticToNewTable();
-    })
+        appendTo(newNode, node);
+        node.remove();
+        unsubscribe = subscribeGameTypeChange();
+        newNode.classList.add(`forecast-statistic-table-${rankingModule.sessionId}`)
+        newNode.querySelector("div.level-progress-container > img").src = getImageResource("src/visual/icons/logo.png").toString();
+        await insertAllStatisticToNewTable(newNode);
+    }, () => { unsubscribe(); })
 })
 
-async function insertAllStatisticToNewTable() {
+async function insertAllStatisticToNewTable(table) {
     let gameType = extractGameType()
     let playerNickName = extractPlayerNick();
     let playerStatistic = await fetchPlayerStatsByNickName(playerNickName);
@@ -81,28 +85,32 @@ async function insertAllStatisticToNewTable() {
     let currentLevel = getLevel(elo, gameType);
     let progressBarPercentage = getBarProgress(elo, gameType);
 
-    insertAllLevelsToTable(currentLevel)
+    insertAllLevelsToTable(table, currentLevel);
 
-    document.getElementById("current-elo").innerText = `${elo}`
+    let currentEloNode = table.querySelector("[class*=current-elo]")
+    currentEloNode.innerText = `${elo}`
+    let currentLevelIcon = levelIcons.get(currentLevel);
+    let levelColor = currentLevelIcon.querySelector("div:nth-child(2) > span > svg > g > path:nth-child(3)").getAttribute("fill")
+    currentEloNode.style.setProperty("--glow-color", `${levelColor}B3`);
     let levelRanges = gameLevelRanges[gameType];
-    document.getElementById("elo-need-to-reach").innerText = `${currentLevel === levelRanges.length ? "" : levelRanges[currentLevel].min - elo}`
-    document.getElementById("elo-need-to-reach-text").innerText = `${currentLevel === levelRanges.length ? "You reached max level!" : `Points needed to reach level ${currentLevel + 1}`}`
+    table.querySelector("[class*=elo-need-to-reach]").innerText = `${currentLevel === levelRanges.length ? "" : levelRanges[currentLevel].min - elo}`
+    table.querySelector("[class*=elo-need-to-reach-text]").innerText = `${currentLevel === levelRanges.length ? "You reached max level!" : `Points needed to reach level ${currentLevel + 1}`}`
 
     for (let level = 1; level <= levelRanges.length; level++) {
-        const levelNode = document.getElementById(`level-node-${level}`);
-        const progressBar = document.getElementById(`progress-bar-${level}`);
-        let levelMinEloTextNode = levelNode.querySelector(`[class="level-value"]`)
+        const levelNode = table.querySelector(`[class*=level-node-${level}]`);
+        const progressBar = table.querySelector(`[class*=progress-bar-${level}]`);
+        let levelMinEloTextNode = levelNode.querySelector(`[class~="level-value"]`)
         const {min, max} = levelRanges[level - 1]
         levelMinEloTextNode.innerText = min
         if (currentLevel > level) {
-            levelNode.setAttribute("reached",'')
+            levelNode.setAttribute("reached", '')
             progressBar.style.width = "100%"
         } else if (currentLevel === levelRanges.length) {
-            levelNode.setAttribute("reached",'')
+            levelNode.setAttribute("reached", '')
             progressBar.style.width = "100%";
-            document.getElementById("progress-bar-20").style.background = "rgb(255, 85, 0)";
+            document.querySelector("[class*=progress-bar-20]").style.background = "rgb(255, 85, 0)";
         } else if (currentLevel === level && elo >= min && elo <= max) {
-            levelNode.setAttribute("reached",'')
+            levelNode.setAttribute("reached", '')
             progressBar.style.width = `${progressBarPercentage}%`;
         } else {
             progressBar.style.width = "0%";
@@ -136,39 +144,61 @@ function getBarProgress(elo, gameType) {
     }
 }
 
-
 function doAfterStatisticNodeAppear(callback) {
-    if (document.getElementById("forecast-statistic-table")) return
-
-    let found = !!document.getElementById("forecast-statistic-table")
-
-    let playerStatsContainerObserverId = "search-player-statistic-container"
-    rankingModule.observeHandler.observeAppear(playerStatsContainerObserverId, function search(node) {
-        if (found) return;
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            let baseElements = [...document.querySelectorAll('[class*=styles__ContentLayoutGrid]')].filter((el) => !el.parentElement.hasAttribute("marked-as-bug"))
-            if (baseElements.length > 0) {
-                let baseElement = baseElements[0];
-                baseElement.setAttribute("player-statistic-container", "");
-                callbackTable(baseElement);
-                found = true;
-                rankingModule.observeHandler.releaseAppearTask(playerStatsContainerObserverId)
-                return;
-            }
-            node.childNodes.forEach(search);
+    rankingModule.doAfterNodeAppear('[class*=styles__ContentLayoutGrid] > div > div:nth-child(2)', (node) => {
+        if (node.nodeType === Node.ELEMENT_NODE && !node.querySelector(`[class~="forecast-statistic-table-${rankingModule.sessionId}"]`)) {
+            let newNode = document.createElement("div")
+            preppendTo(newNode, node);
+            callback(newNode);
         }
-    })
+    });
+}
 
-    function callbackTable(baseElement) {
-        let newNode = document.createElement("div")
-        rankingModule.doAfter(() => baseElement.children.length === 3, () => {
-            let targetNode = baseElement.children[2]
-            rankingModule.doAfter(() => targetNode.querySelector('[class*="styles__StatsSection"]:not([marked-as-bug])'), () => {
-                if (!!document.getElementById("forecast-statistic-table")) return
-                appendTo(newNode, targetNode.children[0])
-                rankingModule.removalNode(newNode)
-                callback(newNode);
-            })
-        })
+function subscribeGameTypeChange() {
+    let currentUrl = window.location.href;
+
+    const urlPattern = /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/[^\/]+\/stats\/(cs2|csgo)$/;
+
+    function getGameType(url) {
+        const match = url.match(urlPattern);
+        return match ? match[1] : null;
     }
+
+    const initialGameType = getGameType(currentUrl);
+
+    if (!initialGameType) return;
+
+    function checkUrlChange() {
+        const newUrl = window.location.href;
+
+        if (newUrl !== currentUrl) {
+            const newGameType = getGameType(newUrl);
+            const oldGameType = getGameType(currentUrl);
+
+            if (newGameType && oldGameType && newGameType !== oldGameType) location.reload();
+
+            currentUrl = newUrl;
+        }
+    }
+
+    const observer = new MutationObserver(() => {
+        checkUrlChange();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    window.addEventListener('popstate', checkUrlChange);
+    window.addEventListener('hashchange', checkUrlChange);
+
+    const intervalId = setInterval(checkUrlChange, 500);
+
+    return function unsubscribe() {
+        observer.disconnect();
+        window.removeEventListener('popstate', checkUrlChange);
+        window.removeEventListener('hashchange', checkUrlChange);
+        clearInterval(intervalId);
+    };
 }
