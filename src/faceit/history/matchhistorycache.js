@@ -69,7 +69,7 @@ async function getFromCacheOrFetch(key, fetch) {
         const cachedData = cacheMap.get(cacheKey);
         cachedData.lastUsed = Date.now();
 
-        updateLastUsed(key, cachedData.lastUsed);
+        await updateLastUsed(key, cachedData.lastUsed);
         return Promise.resolve(cachedData.data);
     }
 
@@ -78,7 +78,7 @@ async function getFromCacheOrFetch(key, fetch) {
         if (cached) {
             cached.lastUsed = Date.now();
             cacheMap.set(cacheKey, cached);
-            updateLastUsed(key, cached.lastUsed);
+            await updateLastUsed(key, cached.lastUsed);
             return cached.data;
         }
     } catch (err) {

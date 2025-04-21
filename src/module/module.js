@@ -9,15 +9,14 @@ class Module {
         this.nodesToRemove = [];
         this.hidedNodes = [];
         this.tasks = [];
-        this.observerTasks = new Map();
-        this.observer = null
+        this.observeHandler = new ObserveHandler();
     }
 
     async #load() {
         if (this.isLoaded) return
         println(`Module ${this.name} is loading`);
         this.#generateSessionId();
-        this.registerObserver();
+        this.observeHandler.register();
         await this.loadAction();
         this.isLoaded = true
         println(`Module ${this.name} is successfully loaded`);
@@ -29,7 +28,7 @@ class Module {
         this.#releaseCaches();
         this.isLoaded = false
         this.#generateSessionId();
-        this.registerObserver();
+        this.observeHandler.register();
         await this.loadAction();
         this.isLoaded = true
         println(`Module ${this.name} is successfully reloaded`);
@@ -51,10 +50,7 @@ class Module {
 
     #releaseCaches() {
         requestAnimationFrame(() => {
-            this.observerTasks.clear();
-            if (this.observer) {
-                this.observer.disconnect()
-            }
+            this.observeHandler.release();
 
             this.processedNodes.forEach((node) => {
                 node?.removeAttribute(this.dataProcessedAttribute)
@@ -99,6 +95,19 @@ class Module {
     preppendToAndHide(sourceNode, hiddenNode) {
         preppendToAndHide(sourceNode, hiddenNode)
         this.hidedNodes.push(hiddenNode)
+    }
+
+    async doAfterNodeDisappear(selector, callback) {
+        return this.observeHandler.doAfterNodeDisappear(selector,callback)
+    }
+    async doAfterNodeAppear(selector, callback) {
+        return this.observeHandler.doAfterNodeAppear(selector,callback)
+    }
+    async doAfterAllNodeAppear(selector, callback) {
+        return this.observeHandler.doAfterAllNodeAppear(selector,callback)
+    }
+    async doAfterAllNodeAppearPack(selector, callback) {
+        return this.observeHandler.doAfterAllNodeAppearPack(selector,callback)
     }
 
     async doAfterAsync(conditionFn, callback, interval = 50) {
@@ -157,64 +166,6 @@ class Module {
         return () => clearInterval(task)
     }
 
-    observe(id, task) {
-        this.observerTasks.set(id, task)
-    }
-
-    releaseObserver(id) {
-        this.observerTasks.delete(id)
-    }
-
-    registerObserver() {
-        this.observer = new MutationObserver(mutationsList => {
-            for (const mutation of mutationsList) {
-                if (mutation.type === 'childList') {
-                    for (const node of mutation.addedNodes) {
-                        this.observerTasks.forEach(async (task, _) => {
-                            await task(node)
-                        })
-                    }
-                }
-            }
-        });
-
-        this.observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    async doAfterNodeAppear(selector, callback) {
-        let element = document.querySelector(selector);
-        if (element) await callback(element)
-        this.observe(selector, async () => {
-            let element = document.querySelector(selector);
-            if (element) await callback(element);
-        });
-    }
-
-    async doAfterAllNodeAppear(selector, callback) {
-        let elements = document.querySelectorAll(selector);
-        if (elements.length !== 0) for (const element of elements) {
-            await callback(element);
-        }
-        this.observe(selector, async () => {
-            let elements = document.querySelectorAll(selector);
-            for (const element of elements) {
-                if (element) await callback(element);
-            }
-        });
-    }
-
-    async doAfterAllNodeAppearPack(selector, callback) {
-        let elements = document.querySelectorAll(selector);
-        if (elements.length !== 0) await callback(elements)
-        this.observe(selector, async () => {
-            let elements = document.querySelectorAll(selector);
-            if (elements.length !== 0) await callback(elements);
-        });
-    }
-
     async produceOf(action) {
         switch (action) {
             case "load":
@@ -229,5 +180,25 @@ class Module {
             default:
                 println("Unknown action:", action);
         }
+    }
+
+    temporaryFaceitBugFix() {
+        let existDialog = document.querySelector('[marked-as-bug]');
+        if (existDialog) {
+            if (!document.querySelector('[role="dialog"][data-dialog-type="LEAF"]')) {
+                existDialog.removeAttribute("marked-as-bug")
+            } else {
+                this.doAfterNodeDisappear('[role="dialog"][data-dialog-type="LEAF"]', (node) => {
+                    existDialog.removeAttribute("marked-as-bug")
+                })
+            }
+            return
+        }
+        this.doAfter(() => document.getElementById("canvas-body")?.parentNode?.querySelector("[role*='dialog']"),
+            (result) => {
+                let toMark = document.getElementById("canvas-body");
+                if (toMark.hasAttribute("marked-as-bug")) return
+                toMark.setAttribute("marked-as-bug",'');
+            }, 100);
     }
 }

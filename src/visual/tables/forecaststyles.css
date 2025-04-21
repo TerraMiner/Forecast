@@ -211,12 +211,13 @@
 .stat-block {
     flex: 1;
     background: rgb(22, 22, 22);
-    padding: 24px;
+    padding: 12px 24px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
+    border-radius: 5px;
 }
 
 .stat-title {
@@ -236,10 +237,35 @@
 
 .level {
     flex: 0 0 calc(92% / 19);
-    border-right: 1px solid rgb(75, 78, 78);
+    border-right: 1px solid rgba(75, 78, 78, 0.5);
     text-align: center;
     padding: 10px 0;
     position: relative;
+}
+
+.level span, .level .level-value, .level .progress-bar-container {
+    opacity: 0.5;
+}
+
+.level span, .level .level-value {
+    transition: opacity 0.6s ease;
+}
+
+.level[reached] span, .level[reached] .level-value, .level[reached] .progress-bar-container {
+    opacity: 1;
+}
+
+.level[reached] {
+    border-right: 1px solid rgb(75, 78, 78);
+}
+
+.level:hover:not([reached]) span,.level:hover:not([reached]) .level-value {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.level .level-value, .level-large .level-value {
+    cursor: default;
 }
 
 .level-large {
@@ -247,6 +273,33 @@
     text-align: center;
     padding: 10px 0;
     position: relative;
+}
+
+.level-large span, .level-large .level-value, .level-large .progress-bar-container {
+    opacity: 0.5;
+}
+
+.level-large span, .level-large .level-value {
+    transition: opacity 0.6s ease;
+}
+
+.level-large[reached] span, .level-large[reached] .level-value, .level-large[reached] .progress-bar-container {
+    opacity: 1;
+}
+
+.level-large:hover:not([reached]) span,.level-large:hover:not([reached]) .level-value {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.level-large .progress-bar-container {
+    border-bottom-right-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+.level:first-child .progress-bar-container {
+    border-bottom-left-radius: 5px;
+    border-top-left-radius: 5px;
 }
 
 .level span, .level-large span,
@@ -281,6 +334,10 @@
     height: 1px;
     background: rgb(48, 48, 48);
     margin: 32px 0;
+}
+
+tr[class*="MatchHistoryTableRow"] {
+    background-color: transparent !important;
 }
 
 .match-counter-arrow {

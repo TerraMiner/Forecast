@@ -63,7 +63,7 @@ function insertAllLevelsToTable(currentLevel) {
 const rankingModule = new Module("ranking", async () => {
     const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking");
     if (!enabled) return;
-
+    rankingModule.temporaryFaceitBugFix();
     doAfterStatisticNodeAppear(async (node) => {
         let newNode = getHtmlResource("src/visual/tables/level-progress-table.html").cloneNode(true)
         rankingModule.appendToAndHide(newNode, node)
@@ -95,17 +95,16 @@ async function insertAllStatisticToNewTable() {
         const {min, max} = levelRanges[level - 1]
         levelMinEloTextNode.innerText = min
         if (currentLevel > level) {
-            levelNode.style.opacity = "1";
+            levelNode.setAttribute("reached",'')
             progressBar.style.width = "100%"
         } else if (currentLevel === levelRanges.length) {
-            levelNode.style.opacity = "1";
+            levelNode.setAttribute("reached",'')
             progressBar.style.width = "100%";
             document.getElementById("progress-bar-20").style.background = "rgb(255, 85, 0)";
         } else if (currentLevel === level && elo >= min && elo <= max) {
-            levelNode.style.opacity = "1";
+            levelNode.setAttribute("reached",'')
             progressBar.style.width = `${progressBarPercentage}%`;
         } else {
-            levelNode.style.opacity = "0.5";
             progressBar.style.width = "0%";
         }
     }
@@ -141,55 +140,22 @@ function getBarProgress(elo, gameType) {
 function doAfterStatisticNodeAppear(callback) {
     if (document.getElementById("forecast-statistic-table")) return
 
-    let element = document.evaluate(
-        "//*[contains(text(), 'Level Progress')]",
-        document,
-        null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE,
-        null
-    ).singleNodeValue?.parentElement.parentElement
-    if (element) callback(element)
-
-    let element1 = document.evaluate(
-        "//*[@player-statistic-container]",
-        document,
-        null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE,
-        null
-    ).singleNodeValue;
-    if (element1) callbackTable(element1)
     let found = !!document.getElementById("forecast-statistic-table")
-    let removed = !!document.getElementById("hided-enchancer-table")
 
     let playerStatsContainerObserverId = "search-player-statistic-container"
-    rankingModule.observe(playerStatsContainerObserverId, function search(node) {
+    rankingModule.observeHandler.observeAppear(playerStatsContainerObserverId, function search(node) {
         if (found) return;
         if (node.nodeType === Node.ELEMENT_NODE) {
-            let baseElement = document.querySelector('[class*=styles__ContentLayoutGrid]')
-            if (baseElement) {
-                baseElement.setAttribute("player-statistic-container", "")
-                callbackTable(baseElement)
+            let baseElements = [...document.querySelectorAll('[class*=styles__ContentLayoutGrid]')].filter((el) => !el.parentElement.hasAttribute("marked-as-bug"))
+            if (baseElements.length > 0) {
+                let baseElement = baseElements[0];
+                baseElement.setAttribute("player-statistic-container", "");
+                callbackTable(baseElement);
                 found = true;
-                rankingModule.releaseObserver(playerStatsContainerObserverId)
+                rankingModule.observeHandler.releaseAppearTask(playerStatsContainerObserverId)
                 return;
             }
             node.childNodes.forEach(search);
-        }
-    })
-
-    let otherStatsTableObserverId = "search-other-statistic-table";
-    rankingModule.observe(otherStatsTableObserverId, function searchForRemove(node) {
-        if (removed) return;
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            let parent = node?.parentElement?.parentElement
-            if (node.innerText === "LEVEL PROGRESS" && !parent.getAttribute("hided") && parent.id !== "forecast-statistic-table") {
-                hideNode(parent)
-                parent.id = "hided-enchancer-table"
-                removed = true
-                rankingModule.releaseObserver(otherStatsTableObserverId)
-                return;
-            }
-            node.childNodes.forEach(searchForRemove);
         }
     })
 
@@ -197,9 +163,10 @@ function doAfterStatisticNodeAppear(callback) {
         let newNode = document.createElement("div")
         rankingModule.doAfter(() => baseElement.children.length === 3, () => {
             let targetNode = baseElement.children[2]
-            rankingModule.doAfter(() => targetNode.querySelector('[class*="styles__StatsSection"]'), () => {
+            rankingModule.doAfter(() => targetNode.querySelector('[class*="styles__StatsSection"]:not([marked-as-bug])'), () => {
                 if (!!document.getElementById("forecast-statistic-table")) return
-                targetNode.children[0].insertAdjacentElement("afterend", newNode)
+                appendTo(newNode, targetNode.children[0])
+                rankingModule.removalNode(newNode)
                 callback(newNode);
             })
         })

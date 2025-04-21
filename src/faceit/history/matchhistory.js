@@ -63,16 +63,12 @@ class MatchNodeByMatchStats {
         let matchNumber = (this.index + 1)
         if (matchNumber % 30 !== 0) return
         let arrowId = `arrow-${matchNumber / 30}`
-        const arrow = getHtmlResource("src/visual/tables/match-counter-arrow.html").cloneNode(true);
-        arrow.id = arrowId
-        let idCounter = 0
-        for (let child of this.node.children) {
-            let borderId = `border-${matchNumber / 30}-${idCounter++}`
-            if (document.getElementById(borderId)) continue
+        let borderId = `border-${matchNumber / 30}`
 
-            child.style.position = "relative";
-            child.style.paddingBottom = "1px";
+        this.node.style.position = "relative";
+        this.node.style.paddingBottom = "1px";
 
+        if (!document.getElementById(borderId)) {
             const borderElement = document.createElement("div");
             borderElement.id = borderId
             borderElement.style.position = "absolute";
@@ -81,39 +77,34 @@ class MatchNodeByMatchStats {
             borderElement.style.width = "100%";
             borderElement.style.height = "1px";
             borderElement.style.backgroundColor = "rgb(255, 85, 0)";
-            child.appendChild(borderElement);
+            borderElement.style.zIndex = "1";
+            this.node.appendChild(borderElement);
         }
+
         if (!document.getElementById(arrowId)) {
-            appendTo(arrow, this.node, 'arrow')
-            arrow.querySelector("[class=match-counter-arrow-square]").innerText = matchNumber
+            const arrow = getHtmlResource("src/visual/tables/match-counter-arrow.html").cloneNode(true);
+            arrow.id = arrowId;
+            arrow.style.position = "relative";
+            arrow.style.zIndex = "2";
+
+            appendTo(arrow, this.node, 'arrow');
+
+            const arrowElements = arrow.querySelectorAll("*");
+            arrowElements.forEach(el => {
+                el.style.position = "relative";
+                el.style.zIndex = "2";
+            });
+
+            arrow.querySelector("[class=match-counter-arrow-square]").innerText = matchNumber;
         }
     }
 }
 
 const matchHistoryModule = new Module("matchhistory", async () => {
-    if (!(await isExtensionEnabled()) || !(await isSettingEnabled("matchhistory"))) return;
-
+    let enabled = (await isExtensionEnabled()) && (await isSettingEnabled("matchhistory"));
+    if (!enabled) return;
+    matchHistoryModule.temporaryFaceitBugFix();
     await loadMatchHistoryCache();
-    await new Promise(resolve => {
-        const maxAttempts = 50;
-        let attempts = 0;
-
-        const checkOtherExtension = () => {
-            const hasEloChanges = document.querySelector('table[matches-elo]') ||
-                Array.from(document.querySelectorAll('span')).some(span =>
-                    span.textContent.includes('(+') || span.textContent.includes('(-')
-                );
-
-            if (hasEloChanges || attempts >= maxAttempts) {
-                resolve();
-            } else {
-                attempts++;
-                setTimeout(checkOtherExtension, 50);
-            }
-        };
-
-        checkOtherExtension();
-    });
 
     let tableRowAttribute = `forecast-matchhistory-row-${matchHistoryModule.sessionId}`;
 
@@ -124,13 +115,22 @@ const matchHistoryModule = new Module("matchhistory", async () => {
     let tableHeadElement;
     let selector = `tr[class*='styles__MatchHistoryTableRow']:not([${tableRowAttribute}]):not(:has([id*='extended-stats-node']))`;
 
-    await matchHistoryModule.doAfterAllNodeAppearPack(selector, async (nodes) => {
-        if (!tableElement) tableElement = nodes[0].parentNode.children;
+    await matchHistoryModule.doAfterAllNodeAppearPack(selector, async function callback(nodes, attempt){
+        let nodesArr = [...nodes].filter((e) => !e.parentNode.parentNode.parentNode.parentNode.parentNode.parentElement.hasAttribute("marked-as-bug"));
+        let attempts = attempt ? attempt : 0;
+        if (nodesArr.length === 0) {
+            if (attempts > 10) {
+                println("Retries out of limit! Aborting")
+                return
+            }
+            println("retry in 100ms...")
+            setTimeout(async () => await callback(nodes, attempts + 1), 100);
+            return
+        }
+        if (!tableElement) tableElement = nodesArr[0].parentNode.children;
         if (!tableHeadElement) tableHeadElement = tableElement[0];
 
-        let tableNodesArray = Array.from(tableElement).filter(child => child.tagName === 'TR');
-
-        let nodeArrays = chunkArray(Array.from(nodes).filter((node) => {
+        let nodeArrays = chunkArray(nodesArr.filter((node) => {
             let flag = tableHeadElement !== node && !node.hasAttribute(tableRowAttribute);
             if (flag) node.setAttribute(tableRowAttribute, '');
             return flag
@@ -138,6 +138,9 @@ const matchHistoryModule = new Module("matchhistory", async () => {
 
         if (nodeArrays.length === 0) return
 
+        let tableNodesArray = Array.from(tableElement).filter(element => element.tagName === 'TR');
+
+        let gameType = extractGameType();
         for (const nodeArray of nodeArrays) {
             let batch = [];
             let batchIndex = lastIndex === -1 ? 0 : lastIndex
@@ -148,7 +151,7 @@ const matchHistoryModule = new Module("matchhistory", async () => {
                 batch.push(new MatchNodeByMatchStats(node, index));
             }
 
-            await loadPlayerMatchHistory(playerId, batchIndex - 1, () => {
+            await loadPlayerMatchHistory(playerId, gameType, batchIndex - 1, () => {
                 loadDetailedMatches(batchIndex)?.then(() => {
                     Promise.all(batch.map(node => node.loadMatchStats(playerId)))
                 })
@@ -236,14 +239,14 @@ function insertRow(node, score, rating, k, d, kd, kr, adr, isWin) {
     replaceOrInsertCell(tableRow, 4, () => createColoredDiv(adr, adr >= 75));
 }
 
-async function loadAllPlayerMatches(playerId, fromId, date) {
+async function loadAllPlayerMatches(playerId, gameType, fromId, date) {
     loadedIdAnchors.add(fromId);
-    const results = await loadPlayerMatches(playerId, MATCHES_PER_LOAD, date);
+    const results = await loadPlayerMatches(playerId, gameType, MATCHES_PER_LOAD, date);
     results.forEach(id => matchIds.push(id));
 }
 
-async function loadPlayerMatches(playerId, amount, date) {
-    const playerGameDatas = await fetchPlayerInGameStats(playerId, extractGameType(), amount, date);
+async function loadPlayerMatches(playerId, gameType, amount, date) {
+    const playerGameDatas = await fetchPlayerInGameStats(playerId, gameType, amount, date);
     return playerGameDatas.items.map(item => item.stats["Match Id"]);
 }
 
@@ -255,16 +258,16 @@ function findPlayerInTeamById(teams, playerId) {
     return {};
 }
 
-async function loadPlayerMatchHistory(playerId, fromId, callback) {
+async function loadPlayerMatchHistory(playerId, gameType, fromId, callback) {
     if (matchIds.length === 0 && loadedIdAnchors.size === 0) {
-        await loadAllPlayerMatches(playerId, fromId, 0).then(callback)
+        await loadAllPlayerMatches(playerId, gameType, fromId, 0).then(callback)
         if (loadedIdAnchors.has(fromId)) return
     }
 
     matchHistoryModule.doAfter(() => matchIds[fromId], (matchId) => {
         fetchMatchStats(matchId).then(match => {
             let from = match["finished_at"];
-            loadAllPlayerMatches(playerId, from, parseInt(from, 10) * 1000).then(callback)
+            loadAllPlayerMatches(playerId, gameType, from, parseInt(from, 10) * 1000).then(callback)
         })
     }, 50)
 }

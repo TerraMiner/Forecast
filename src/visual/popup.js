@@ -27,6 +27,21 @@ async function setStorage(items) {
     });
 }
 
+async function loadManifestInfo() {
+    const runtime = browserType === "FIREFOX" ? browser.runtime : chrome.runtime;
+    const manifest = runtime.getManifest()
+
+    const versionElement = document.getElementById('version');
+    if (versionElement) {
+        versionElement.textContent = manifest.version;
+    }
+
+    const authorElement = document.getElementById('author');
+    if (authorElement) {
+        authorElement.textContent = manifest.author;
+    }
+}
+
 async function popupLoad() {
     try {
         const settings = await getStorage(['isEnabled']);
@@ -94,24 +109,34 @@ async function saveSettings() {
     }
 }
 
+function updateTabButtonLabels() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+
+    tabButtons.forEach(button => {
+        const tabName = button.getAttribute('data-tab');
+        const tabLabels = {
+            "general": "General",
+            "features": "Features",
+            "about": "About"
+        };
+
+        button.innerHTML = `<span>${tabLabels[tabName] || tabName}</span>`;
+    });
+}
+
+window.addEventListener('message', (event) => {
+    if (event.origin !== "https://www.faceit.com") return;
+    if (event.data.action === 'setBackgroundColor') {
+        document.body.style.backgroundColor = event.data.color;
+    }
+}, false);
+
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         await loadSettings();
         await popupLoad();
-
-        const runtime = browserType === "FIREFOX" ? browser.runtime : chrome.runtime;
-        const manifestResponse = await fetch(runtime.getURL('manifest.json'));
-        const manifest = await manifestResponse.json();
-
-        const versionElement = document.getElementById('version');
-        if (versionElement) {
-            versionElement.textContent = manifest.version;
-        }
-
-        const authorElement = document.getElementById('author');
-        if (authorElement) {
-            authorElement.textContent = manifest.author;
-        }
+        await loadManifestInfo();
+        updateTabButtonLabels();
 
         const tabButtons = document.querySelectorAll('.tab-button');
         const categories = document.querySelectorAll('.settings-category');
@@ -168,18 +193,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
 
-        let nitificationTimeOut = null
+        let notificationTimeout = null;
 
         document.getElementById('copyButton').addEventListener('click', () => {
             navigator.clipboard.writeText("forecast.extension@gmail.com").then(() => {
                 const notification = document.getElementById('notification');
                 notification.classList.add('show');
 
-                if (nitificationTimeOut) clearTimeout(nitificationTimeOut);
+                if (notificationTimeout) clearTimeout(notificationTimeout);
 
-                nitificationTimeOut = setTimeout(() => {
+                notificationTimeout = setTimeout(() => {
                     notification.classList.remove('show');
-                    nitificationTimeOut = null
+                    notificationTimeout = null;
                 }, 2000);
             });
         });

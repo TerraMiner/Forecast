@@ -99,7 +99,7 @@ class PartySlot {
 const newLevelsModule = new Module("levels", async () => {
     const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking");
     if (!enabled) return;
-
+    newLevelsModule.temporaryFaceitBugFix();
     hideWithCSS(`[data-repeek-level-progress]:not([id*="content-grid-element"]) a[href*="/stats"]:not([id="user-url"],[type="primary"])`);
     hideWithCSS(`[class*="SkillIcon__StyledSvg"]`);
 
@@ -107,7 +107,20 @@ const newLevelsModule = new Module("levels", async () => {
     styleElement.textContent = `span[id*="lvlicon"]:has(+ [class*="SkillIcon__StyledSvg"]) {margin-inline-end: 0 !important;}`;
     document.head.appendChild(styleElement);
 
-    await newLevelsModule.doAfterNodeAppear('[class*="Content__StyledContentElement"]', async (element) => {
+    await newLevelsModule.doAfterNodeAppear('div[class*="FriendsMenu__FriendsListHolder"]', async (el) => {
+       newLevelsModule.doAfter(() => {
+           let childs = el.children
+           return childs.length > 1
+       }, () => {
+           let arr = el.children
+           let elem = arr[1].children[0].querySelector('[class*="styles__HolderButton"]').children[1].children[1]
+           newLevelsModule.doAfter(() => arr[1].children[0].querySelector('[class*="styles__HolderButton"]').children[1].children[1], (elem1) => {
+               console.log(elem1)
+           })
+       }, 100)
+    });
+
+    await newLevelsModule.doAfterNodeAppear('div[class*="Content__StyledContentElement"][data-dialog-type="TRAY"]:not([marked-as-bug])', async (element) => {
         let uniqueCheck = () => element?.parentElement?.querySelector('[id*="statistic-progress-bar"]')
         if (!uniqueCheck()) {
             await newLevelsModule.doAfterAsync(() => element.querySelector('[class*="styles__HeadingWrapper"]'), async (result) => {
@@ -363,7 +376,17 @@ async function insertStatsToEloBar(nick) {
     let currentLevel = getLevel(elo, gameType)
     let progressBarPercentage = getBarProgress(elo, gameType);
     let node = document.getElementById("skill-current-level")
-    node.innerHTML = levelIcons.get(currentLevel).innerHTML
+    
+    while (node.firstChild) {
+        node.removeChild(node.firstChild);
+    }
+    
+    const levelIcon = levelIcons.get(currentLevel);
+    if (levelIcon) {
+        Array.from(levelIcon.childNodes).forEach(child => {
+            node.appendChild(child.cloneNode(true));
+        });
+    }
 
     let levelRanges = gameLevelRanges[gameType];
     let {min, max} = levelRanges[currentLevel - 1]

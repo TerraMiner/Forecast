@@ -2,6 +2,7 @@ let previousUrl = "";
 
 const regexModules = [
     {regex: /^https:\/\/www\.faceit\.com\/.*$/, module: newLevelsModule},
+    {regex: /^https:\/\/www\.faceit\.com\/.*$/, module: logoSidebarModule},
     {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats(\/.*)?$/, module: rankingModule},
     {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/[\w\-]+\/room\/[0-9a-zA-Z\-]+(\/.*)?$/, module: matchRoomModule},
     {regex: /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats(\/.*)?$/, module: matchHistoryModule}
