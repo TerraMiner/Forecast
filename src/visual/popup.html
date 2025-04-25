@@ -13,7 +13,7 @@
         <div class="sidebar">
             <div class="header">
                 <div class="logo-container">
-                    <img src="icons/logo.png" alt="Forecast Logo" class="extension-logo">
+                    <img src="icons/logo512.png" alt="Forecast Logo" class="extension-logo">
                 </div>
                 <div class="extension-title">FORECAST</div>
             </div>
@@ -35,7 +35,8 @@
                 </div>
                 <div class="description-box">
                     <p>A convenient extension for detailed Faceit statistics.</p>
-                    <p>This project is a browser extension that collects and displays detailed statistics for Faceit matches and players.</p>
+                    <p>This project is a browser extension that collects and displays detailed statistics for Faceit
+                        matches and players.</p>
                     <p>Key features include:</p>
                     <ul>
                         <li>Adds new levels</li>
@@ -47,31 +48,115 @@
             </div>
 
             <div id="features" class="settings-category">
-                <div class="setting-item">
-                    <label>Advanced Match History</label>
-                    <label class="switch">
-                        <input type="checkbox" id="matchhistory" checked>
-                        <span class="slider"></span>
-                    </label>
+                <div class="setting-group">
+                    <div class="setting-item">
+                        <div class="setting-header">
+                            <label>Advanced Match History</label>
+                            <button class="info-button" aria-label="Show more information">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 16v-4"></path>
+                                    <path d="M12 8h.01"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="matchhistory" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-description">
+                        <p>It displays detailed player stats in match history.</p>
+                        <p>Shows:</p>
+                        <ul>
+                            <li>Match score</li>
+                            <li>HLTV rating 2.1 (~7%)</li>
+                            <li>Kills and deaths</li>
+                            <li>KD and KR ratios</li>
+                            <li>Average Damage per Round (ADR)</li>
+                        </ul>
+                        <p>It also adds quick access to view the match scoreboard directly from the history.</p>
+                    </div>
                 </div>
-                <div class="setting-item">
-                    <label>New Elo Rankings</label>
-                    <label class="switch">
-                        <input type="checkbox" id="eloranking" checked>
-                        <span class="slider"></span>
-                    </label>
+
+                <div class="setting-group">
+                    <div class="setting-item">
+                        <div class="setting-header">
+                            <label>New Elo Rankings</label>
+                            <button class="info-button" aria-label="Show more information">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 16v-4"></path>
+                                    <path d="M12 8h.01"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="eloranking" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-description">
+                        <p>It adds extra rating levels for a more accurate reflection of player skill at higher
+                            ranks.</p>
+                        <p>It expands the standard 10-level Faceit system, making the ranking more detailed.</p>
+                    </div>
                 </div>
-                <div class="setting-item">
-                    <label>Extended in-match info</label>
-                    <label class="switch">
-                        <input type="checkbox" id="matchroom" checked>
-                        <span class="slider"></span>
-                    </label>
+
+                <div class="setting-group">
+                    <div class="setting-item">
+                        <div class="setting-header">
+                            <label>Extended in-match info</label>
+                            <button class="info-button" aria-label="Show more information">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 16v-4"></path>
+                                    <path d="M12 8h.01"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="matchroom" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-description">
+                        <p>It shows extended info about teams and individual players in the match room, calculating
+                            the number of games and win percentage on each map.
+                        </p>
+                        <p>This helps better assess team strengths on specific maps before the game starts.</p>
+                    </div>
                 </div>
-                <div class="setting-item slider-container">
-                    <span class="limit-label">Match Analyze Limit</span>
-                    <input type="range" id="rangeSlider" class="range-slider" min="5" max="100" value="20">
-                    <span id="sliderValue">20</span>
+
+                <div class="setting-group">
+                    <div class="setting-item slider-container">
+                        <div class="setting-header">
+                            <span class="limit-label">Match Analyze Limit</span>
+                            <button class="info-button" aria-label="Show more information">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 16v-4"></path>
+                                    <path d="M12 8h.01"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="slider-controls">
+                            <input type="range" id="rangeSlider" class="range-slider" min="5" max="100" value="30">
+                            <span id="sliderValue">30</span>
+                        </div>
+                    </div>
+                    <div class="setting-description">
+                        <p>It lets you adjust the number of matches used for analysis within a match.</p>
+                        <p>Has no effect if the 'Extended in-match info' setting is turned off.</p>
+                    </div>
                 </div>
             </div>
 

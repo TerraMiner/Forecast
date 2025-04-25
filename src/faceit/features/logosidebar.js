@@ -10,38 +10,55 @@ const logoSidebarModule = new Module("logoSidebar", async () => {
         brightness: '1.2'
     };
 
-    await logoSidebarModule.doAfterNodeAppear('[class*="styles__TopContent"]', (node) => {
-        if (document.getElementById("fc-logo-button")) return
+    const createLogoContainer = (isTopContent = false) => {
         const container = document.createElement("div");
-        container.id = "fc-logo-button"
+        container.id = "fc-logo-button";
         container.className = "fc-logo-container";
-        container.style.margin = "10px";
         container.style.cursor = "pointer";
-        container.title = "FACEIT FORECAST Settings";
+        container.title = "FORECAST";
+
+        if (isTopContent) {
+            container.style.margin = "10px";
+        }
 
         const gradientWrapper = document.createElement("div");
         gradientWrapper.className = "fc-logo-gradient";
 
-        gradientWrapper.style.setProperty('--border-width', logoConfig.borderWidth);
-        gradientWrapper.style.setProperty('--border-blur', logoConfig.borderBlur);
-        gradientWrapper.style.setProperty('--border-opacity', logoConfig.borderOpacity);
-        gradientWrapper.style.setProperty('--animation-speed', logoConfig.animationSpeed);
-        gradientWrapper.style.setProperty('--hover-brightness', logoConfig.brightness);
+        Object.entries(logoConfig).forEach(([key, value]) => {
+            const cssVar = `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+            gradientWrapper.style.setProperty(cssVar, value);
+        });
 
         const img = document.createElement("img");
-        img.src = getImageResource("src/visual/icons/logo.png").toString();
+        img.src = getImageResource("src/visual/icons/logo64.png").toString();
         img.alt = "Forecast Logo";
         img.className = "fc-logo-image";
 
-        hideEmptyStyleContainer(node);
-
         gradientWrapper.appendChild(img);
         container.appendChild(gradientWrapper);
-        node.appendChild(container);
-
-        addLogoStyles();
 
         container.addEventListener('click', openExtensionPopup);
+
+        return container;
+    };
+
+    await logoSidebarModule.doAfterNodeAppear('[class*="styles__TopContent"]', (node) => {
+        if (document.getElementById("fc-logo-button")) return;
+
+        const container = createLogoContainer(true);
+        node.appendChild(container);
+
+        hideEmptyStyleContainer(node);
+        addLogoStyles();
+    });
+
+    await logoSidebarModule.doAfterNodeAppear('[class*="styles__RightSideContainer"]', (node) => {
+        if (document.getElementById("fc-logo-button")) return;
+
+        const container = createLogoContainer();
+        node.prepend(container);
+
+        addLogoStyles();
     });
 }, async () => {});
 
@@ -73,6 +90,7 @@ function openExtensionPopup() {
     const popupFrame = document.createElement("iframe");
     popupFrame.src = popupURL;
     popupFrame.id = "forecast-popup-frame";
+    popupFrame.setAttribute("allow","clipboard-write")
 
     popupContent.appendChild(popupFrame);
     popupContainer.appendChild(popupContent);
@@ -85,15 +103,67 @@ function openExtensionPopup() {
     const logoButton = document.querySelector(".fc-logo-container");
     if (logoButton) {
         const rect = logoButton.getBoundingClientRect();
+        const isTopMenu = logoButton.closest('[class*="styles__TopContent"]') !== null;
+        const isRightSidebar = logoButton.closest('[class*="styles__RightSideContainer"]') !== null;
+        const popupWidth = 480;
+        const popupHeight = 400;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
         popupContainer.style.position = "fixed";
-        popupContainer.style.right = `${rect.width + 25}px`;
-        popupContainer.style.top = `${rect.top}px`;
+
+        if (isRightSidebar) {
+            let top = rect.bottom + 10;
+            let left = rect.left;
+
+            if (top + popupHeight > windowHeight) {
+                top = Math.max(10, windowHeight - popupHeight - 10);
+            }
+
+            if (left + popupWidth > windowWidth) {
+                left = Math.max(10, windowWidth - popupWidth - 10);
+            }
+
+            popupContainer.style.top = `${top}px`;
+            popupContainer.style.left = `${left}px`;
+            popupContent.style.transformOrigin = "top left";
+        } else if (isTopMenu) {
+            let top = rect.top;
+            let left = rect.left - popupWidth - 10;
+
+            if (left < 0) {
+                left = rect.right + 10;
+                if (left + popupWidth > windowWidth) {
+                    left = Math.max(10, rect.left + rect.width/2 - popupWidth/2);
+                }
+            }
+
+            if (top + popupHeight > windowHeight) {
+                top = Math.max(10, windowHeight - popupHeight - 10);
+            }
+
+            popupContainer.style.top = `${top}px`;
+            popupContainer.style.left = `${left}px`;
+            popupContent.style.transformOrigin = "top right";
+        } else {
+            popupContainer.style.top = `${rect.top}px`;
+            popupContainer.style.left = `${rect.right + 10}px`;
+
+            if (rect.right + 10 + popupWidth > windowWidth) {
+                popupContainer.style.left = `${rect.left - popupWidth - 10}px`;
+            }
+        }
     }
 
     addPopupStyles();
 
     document.addEventListener("click", function closePopupOutside(e) {
-        if (!popupContainer.contains(e.target) && !logoButton.contains(e.target)) {
+        const popupContainer = document.getElementById("forecast-popup-container");
+        const logoButton = document.querySelector(".fc-logo-container");
+
+        if (popupContainer &&
+            !popupContainer.contains(e.target) &&
+            logoButton && !logoButton.contains(e.target)) {
             popupContainer.remove();
             document.removeEventListener("click", closePopupOutside);
         }
@@ -120,7 +190,6 @@ function addPopupStyles() {
             overflow: hidden;
             background-color: transparent;
             animation: fc-popup-appear 0.2s ease forwards;
-            transform-origin: left top;
         }
         
         @keyframes fc-popup-appear {

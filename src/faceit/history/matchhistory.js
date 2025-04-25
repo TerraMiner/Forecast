@@ -5,6 +5,45 @@ const loadingMatches = new Set();
 const loadedIdAnchors = new Set();
 const matchNodesByMatchStats = [];
 
+const weights = {
+    killWeight: 1.25,
+    assistWeight: 0.48,
+    deathWeight: 0.88,
+    baseMultiplier: 0.88,
+    adrBonus: 0.018,
+    killRating: 0.2,
+    sniperKills: 0.06,
+    pistolKills: 0.04,
+    survivalRating: 0.16,
+    mvpFactor: 0.26,
+    kast: 0.57,
+    damage: 0.22,
+    multiKill: 0.2,
+    clutch: {
+        base: 0.32,
+        perKill: 0.2,
+        win1v1: 0.29,
+        win1v2: 0.56,
+    },
+    entryImpact: {
+        firstKills: 0.27,
+        entrySuccess: 0.27,
+        impact: 0.33,
+    },
+    headshot: {
+        percentage: 0.1,
+        bonus: 0.14,
+    },
+    utility: {
+        damage: 0.16,
+        flashEfficiency: 0.2,
+        successRate: 0.14,
+    },
+    impactOverall: 0.19,
+    finalMultiplier: 0.51,
+    normalizationFactor: 0.769,
+};
+
 class MatchNodeByMatchStats {
     constructor(node, index) {
         this.node = node;
@@ -40,6 +79,7 @@ class MatchNodeByMatchStats {
 
     setupStatsToNode(playerId, detailedMatchInfo) {
         if (!this.matchStats) return;
+
         const {
             "Kills": k,
             "Assists": a,
@@ -48,15 +88,116 @@ class MatchNodeByMatchStats {
             "K/D Ratio": kd,
             "K/R Ratio": kr,
             "Entry Count": entryCount,
-            "First Kills": firstKills
+            "First Kills": firstKills,
+            "Double Kills": doubleKills,
+            "Triple Kills": tripleKills,
+            "Quadro Kills": quadroKills,
+            "Penta Kills": pentaKills,
+            "Entry Wins": entryWins,
+            "Clutch Kills": clutchKills,
+            "1v1Wins": oneVOneWins,
+            "1v2Wins": oneVTwoWins,
+            "1v1Count": oneVOneCount,
+            "1v2Count": oneVTwoCount,
+            "Utility Damage": utilityDamage,
+            "Headshots": headshots,
+            "Headshots %": headshotsPercentage,
+            "MVPs": mvps,
+            "Flash Successes": flashSuccesses,
+            "Enemies Flashed": enemiesFlashed,
+            "Flash Count": flashCount,
+            "Damage": damage,
+            "Sniper Kills": sniperKills,
+            "Pistol Kills": pistolKills,
+            "Utility Success Rate per Match": utilitySuccessRate,
+            "Match Entry Success Rate": matchEntrySuccessRate,
         } = this.matchStats;
-        const entryImpact = Math.min(parseInt(entryCount, 10), parseInt(firstKills, 10));
-        const rounds = this.rounds;
-        const kast = ((parseInt(k, 10) + parseInt(a, 10) + entryImpact) / rounds) * 100;
-        const impact = (parseInt(k, 10) + 0.5 * parseInt(a, 10) - entryImpact * 1.5) / rounds;
 
-        const rating = (0.0073 * kast + 0.3591 * parseFloat(kr) - 0.5329 * (parseInt(d, 10) / rounds) + 0.2372 * impact + 0.0032 * parseInt(adr, 10) + 0.1587).toFixed(2);
-        insertStatsIntoNode(this, rating, k, d, kd, kr, adr, playerId, detailedMatchInfo);
+        // Парсинг основных значений
+        const rounds = this.rounds;
+        const kills = parseInt(k, 10);
+        const deaths = parseInt(d, 10);
+        const assists = parseInt(a, 10);
+        const kdRatio = parseFloat(kd) || (kills / Math.max(1, deaths));
+        const krValue = parseFloat(kr);
+        const adrValue = parseFloat(adr);
+        const totalDamage = parseInt(damage, 10) || adrValue * rounds;
+
+        // Вспомогательные функции
+        const safeInt = str => parseInt(str, 10) || 0;
+        const safeFloat = str => parseFloat(str) || 0;
+        const safeRatio = (a, b) => a / Math.max(1, b);
+        const bonusIf = (value, threshold, factor) => value > threshold ? (value - threshold) * factor : 0;
+
+        // Парсинг дополнительных значений
+        const mvpsValue = safeInt(mvps);
+        const firstKillsValue = safeInt(firstKills);
+        const entryWinsValue = safeInt(entryWins);
+        const entryCountValue = safeInt(entryCount);
+        const utilityDamageValue = safeInt(utilityDamage);
+        const headshotsInt = safeInt(headshots);
+        const hsPercentage = safeFloat(headshotsPercentage) / 100;
+        const oneVOneWinsInt = safeInt(oneVOneWins);
+        const oneVTwoWinsInt = safeInt(oneVTwoWins);
+        const oneVOneCountInt = safeInt(oneVOneCount);
+        const oneVTwoCountInt = safeInt(oneVTwoCount);
+        const flashSuccessesValue = safeInt(flashSuccesses);
+        const enemiesFlashedValue = safeInt(enemiesFlashed);
+        const flashCountValue = safeInt(flashCount);
+
+        let baseRating = ((kills * weights.killWeight + assists * weights.assistWeight) /
+            Math.max(1, deaths * weights.deathWeight)) * weights.baseMultiplier;
+        baseRating *= 1 + bonusIf(kdRatio, 2.0, 0.05);
+
+        const killRating = krValue * weights.killRating + bonusIf(krValue, 1.0, 0.09);
+        const sniperKillsValue = safeRatio(safeInt(sniperKills), kills) * weights.sniperKills;
+        const pistolKillsValue = safeRatio(safeInt(pistolKills), kills) * weights.pistolKills;
+        const survivalRate = 1 - safeRatio(deaths, rounds);
+        const survivalRating = survivalRate * weights.survivalRating + bonusIf(survivalRate, 0.7, 0.2);
+        const mvpRatio = safeRatio(mvpsValue, rounds);
+        const mvpFactor = mvpRatio * weights.mvpFactor + bonusIf(mvpsValue, 3, 0.03);
+        const kastEstimate = Math.min(1.0,
+            safeRatio(kills + assists, rounds) * 0.65 +
+            safeRatio(Math.max(1, rounds) - deaths, rounds) * 0.35);
+        const kastRating = kastEstimate * weights.kast;
+        const damageRating = safeRatio(totalDamage, rounds * 125) * weights.damage + bonusIf(adrValue, 90, weights.adrBonus);
+        const multiKillFactor =
+            safeInt(doubleKills) * 1.1 +
+            safeInt(tripleKills) * 1.6 +
+            safeInt(quadroKills) * 2.2 +
+            safeInt(pentaKills) * 3.0;
+        const multiKillRating = safeRatio(multiKillFactor, rounds) * weights.multiKill;
+        const clutchWinRate1v1 = safeRatio(oneVOneWinsInt, oneVOneCountInt);
+        const clutchWinRate1v2 = safeRatio(oneVTwoWinsInt, oneVTwoCountInt);
+        const clutchBonus = bonusIf(clutchWinRate1v1, 0.6, 0.15) + bonusIf(clutchWinRate1v2, 0.4, 0.25);
+        const clutchRating =
+            (clutchWinRate1v1 * weights.clutch.win1v1 + clutchWinRate1v2 * weights.clutch.win1v2) * weights.clutch.base +
+            safeRatio(safeInt(clutchKills), rounds) * weights.clutch.perKill +
+            clutchBonus;
+        const entrySuccessRate = safeFloat(matchEntrySuccessRate) || safeRatio(entryWinsValue, entryCountValue);
+        const firstKillBonus = bonusIf(safeRatio(firstKillsValue, rounds), 0.3, 0.2);
+        const entryImpact = (
+            firstKillsValue * weights.entryImpact.firstKills +
+            (entrySuccessRate * entryCountValue) * weights.entryImpact.entrySuccess +
+            firstKillBonus
+        ) * weights.entryImpact.impact;
+        const headShotRatio = safeRatio(headshotsInt, kills);
+        const hsBonus = bonusIf(hsPercentage, 0.6, 0.2);
+        const hsRating = hsPercentage * weights.headshot.percentage +
+            (headShotRatio > 0.5 ? weights.headshot.bonus + bonusIf(headShotRatio, 0.5, 0.15) : 0) +
+            hsBonus;
+        const flashEfficiency = safeRatio(flashSuccessesValue, flashCountValue) *
+            safeRatio(enemiesFlashedValue, rounds * 2) * weights.utility.flashEfficiency;
+        const utilitySuccessRateValue = safeFloat(utilitySuccessRate) * weights.utility.successRate;
+        const utilityDamageBonus = bonusIf(safeRatio(utilityDamageValue, rounds * 10), 1, 0.1);
+        const utilityImpact = safeRatio(utilityDamageValue, rounds * 15) * weights.utility.damage +
+            flashEfficiency + utilitySuccessRateValue + utilityDamageBonus;
+        const impactRating = (multiKillRating + clutchRating + entryImpact) * weights.impactOverall;
+        let rating = (baseRating + killRating + sniperKillsValue + pistolKillsValue +
+            survivalRating + mvpFactor + kastRating + damageRating + impactRating +
+            hsRating + utilityImpact) * weights.finalMultiplier * weights.normalizationFactor;
+
+        insertStatsIntoNode(this, rating.toFixed(2), k, d, kd, kr, adr, playerId, detailedMatchInfo);
     }
 
     setupMatchCounterArrow() {

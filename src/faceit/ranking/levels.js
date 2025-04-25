@@ -100,7 +100,6 @@ const newLevelsModule = new Module("levels", async () => {
     const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking");
     if (!enabled) return;
     newLevelsModule.temporaryFaceitBugFix();
-    hideWithCSS(`[data-repeek-level-progress]:not([id*="content-grid-element"]) a[href*="/stats"]:not([id="user-url"],[type="primary"])`);
     hideWithCSS(`[class*="SkillIcon__StyledSvg"]`);
 
     const styleElement = document.createElement("style");
@@ -127,8 +126,8 @@ const newLevelsModule = new Module("levels", async () => {
         switch (true) {
             case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats\/([^\/]+)$/.test(url):
                 return "stats";
-            case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/collections.*/.test(url):
-                return "collections";
+            case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/inventory.*/.test(url):
+                return "inventory";
             case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)(\/.*)?$/.test(url):
                 return "profile";
             case /^https:\/\/www\.faceit\.com\/\w+\/[\w\-]+\/room\/[\w\-]+(\/.*)?$/.test(url):
@@ -255,6 +254,20 @@ const newLevelsModule = new Module("levels", async () => {
     } else if (lobbyType === "matchmaking") {
         let partySlots = new Map();
         let selector = '[class*=Matchmaking__PlayHolder]';
+        let selector2 = 'main[class*="Layout__Container"] > div[class*="Header__Container"] > div:nth-child(2) > div > div > div:nth-child(1) > button > div > div:nth-child(1)'
+        await newLevelsModule.doAfterNodeAppear(selector2, async (node) => {
+            if (node.querySelector("[class*=elowidgeticon]")) return
+            let eloText = node.parentElement.querySelector('div:nth-child(2) > div:nth-child(2) > h5').innerText
+            let elo = parseInt(eloText.replace(/[\s,._]/g, ''), 10)
+            let level = getLevel(elo, "cs2");
+            let levelIcon = levelIcons.get(level).cloneNode(true);
+            levelIcon.classList.add("elowidgeticon");
+            let levelSpan = levelIcon.firstChild;
+            levelSpan.style.width = "58px"
+            levelSpan.style.height = "58px"
+            levelSpan.style.margin = "2px 0px"
+            node.appendChild(levelIcon);
+        })
         await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
             let uniqueCheck = () => node.id === matchmakingHolderId
             if (uniqueCheck()) return
@@ -292,10 +305,10 @@ const newLevelsModule = new Module("levels", async () => {
                 node.id = matchmakingHolderId
             })
         })
-    } else if (lobbyType === "collections") {
+    } else if (lobbyType === "inventory") {
         let selector = '[class*="styles__EloText"]';
         await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
-            let uniqueCheck = () => node.id === collectionLevelIconId
+            let uniqueCheck = () => node.matches(`[class*="${collectionLevelIconId}"]`)
             if (uniqueCheck()) return
             let eloText = node.innerText
             let elo = parseInt(eloText.replace(/[\s,._]/g, ''), 10)
@@ -306,7 +319,7 @@ const newLevelsModule = new Module("levels", async () => {
                 let innerNewIcon = newIcon.firstElementChild;
                 newLevelsModule.appendToAndHide(innerNewIcon, oldIcon)
                 newLevelsModule.removalNode(innerNewIcon)
-                node.id = collectionLevelIconId
+                node.classList.add(collectionLevelIconId);
             })
         })
     }
@@ -348,7 +361,8 @@ async function insertStatsToEloBar(nick, table) {
     let gameType = "cs2"
     let playerStatistic = await fetchPlayerStatsByNickName(nick);
     let gameStats = playerStatistic["games"][gameType];
-    table.setAttribute("href", `/${extractLanguage()}/players/${nick}/stats/${gameType}`)
+    table.querySelector("a").setAttribute("href", `/${extractLanguage()}/players/${nick}/stats/${gameType}`);
+    table.querySelector("[class~=brand-icon-small]").src = getImageResource("src/visual/icons/logo256.png").toString();
 
     let elo = parseInt(gameStats["faceit_elo"], 10);
     let currentLevel = getLevel(elo, gameType)

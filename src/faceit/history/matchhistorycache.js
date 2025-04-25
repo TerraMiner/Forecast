@@ -2,6 +2,7 @@ const forecastCacheKeyPrefix = "forecast-matchhistory"
 const cookieCacheId = "last-matchhistorycache-cleanup";
 const cleanUpPeriod = 86400000;
 const maxUnusedHours = 48;
+const CACHE_VERSION = 1;
 
 const DB_NAME = 'faceit_matches';
 const STORE_NAME = 'matches';
@@ -35,6 +36,7 @@ async function initDB() {
                 const store = db.createObjectStore(STORE_NAME, {keyPath: 'matchId'});
                 store.createIndex('cacheDate', 'cacheDate');
                 store.createIndex('lastUsed', 'lastUsed');
+                store.createIndex('version', 'version'); // Добавлен индекс для версии
             }
         };
     });
@@ -51,7 +53,10 @@ async function loadMatchHistoryCache() {
         request.onsuccess = () => {
             const matches = request.result;
             matches.forEach(match => {
-                cacheMap.set(`${forecastCacheKeyPrefix}::${match.matchId}`, match);
+                // Загружаем только записи с актуальной версией
+                if (match.version === CACHE_VERSION) {
+                    cacheMap.set(`${forecastCacheKeyPrefix}::${match.matchId}`, match);
+                }
             });
             resolve();
         };
@@ -67,15 +72,21 @@ async function getFromCacheOrFetch(key, fetch) {
 
     if (cacheMap.has(cacheKey)) {
         const cachedData = cacheMap.get(cacheKey);
-        cachedData.lastUsed = Date.now();
 
-        await updateLastUsed(key, cachedData.lastUsed);
-        return Promise.resolve(cachedData.data);
+        // Проверяем версию кеша
+        if (cachedData.version === CACHE_VERSION) {
+            cachedData.lastUsed = Date.now();
+            await updateLastUsed(key, cachedData.lastUsed);
+            return Promise.resolve(cachedData.data);
+        } else {
+            // Если версия устарела, удаляем из кеша
+            cacheMap.delete(cacheKey);
+        }
     }
 
     try {
         const cached = await getFromDB(key);
-        if (cached) {
+        if (cached && cached.version === CACHE_VERSION) {
             cached.lastUsed = Date.now();
             cacheMap.set(cacheKey, cached);
             await updateLastUsed(key, cached.lastUsed);
@@ -97,6 +108,7 @@ async function getFromCacheOrFetch(key, fetch) {
                             nickname: player.nickname,
                             player_id: player.player_id,
                             player_stats: {
+                                // Уже существующие поля
                                 "Kills": player.player_stats.Kills,
                                 "Assists": player.player_stats.Assists,
                                 "Deaths": player.player_stats.Deaths,
@@ -107,22 +119,59 @@ async function getFromCacheOrFetch(key, fetch) {
                                 "First Kills": player.player_stats["First Kills"],
                                 "Headshots": player.player_stats["Headshots"],
                                 "Headshots %": player.player_stats["Headshots %"],
-                                "MVPs": player.player_stats["MVPs"]
+                                "MVPs": player.player_stats["MVPs"],
+                                "Double Kills": player.player_stats["Double Kills"],
+                                "Triple Kills": player.player_stats["Triple Kills"],
+                                "Quadro Kills": player.player_stats["Quadro Kills"],
+                                "Penta Kills": player.player_stats["Penta Kills"],
+                                "Clutch Kills": player.player_stats["Clutch Kills"],
+                                "Entry Wins": player.player_stats["Entry Wins"],
+                                "1v1Wins": player.player_stats["1v1Wins"],
+                                "1v2Wins": player.player_stats["1v2Wins"],
+                                "1v1Count": player.player_stats["1v1Count"],
+                                "1v2Count": player.player_stats["1v2Count"],
+                                "Utility Damage": player.player_stats["Utility Damage"],
+                                "Flash Successes": player.player_stats["Flash Successes"],
+                                "Flash Success Rate per Match": player.player_stats["Flash Success Rate per Match"],
+                                "Flashes per Round in a Match": player.player_stats["Flashes per Round in a Match"],
+                                "Knife Kills": player.player_stats["Knife Kills"],
+                                "Utility Successes": player.player_stats["Utility Successes"],
+                                "Zeus Kills": player.player_stats["Zeus Kills"],
+                                "Flash Count": player.player_stats["Flash Count"],
+                                "Result": player.player_stats["Result"],
+                                "Utility Damage Success Rate per Match": player.player_stats["Utility Damage Success Rate per Match"],
+                                "Utility Usage per Round": player.player_stats["Utility Usage per Round"],
+                                "Sniper Kill Rate per Match": player.player_stats["Sniper Kill Rate per Match"],
+                                "Utility Count": player.player_stats["Utility Count"],
+                                "Sniper Kill Rate per Round": player.player_stats["Sniper Kill Rate per Round"],
+                                "Match Entry Rate": player.player_stats["Match Entry Rate"],
+                                "Enemies Flashed per Round in a Match": player.player_stats["Enemies Flashed per Round in a Match"],
+                                "Utility Success Rate per Match": player.player_stats["Utility Success Rate per Match"],
+                                "Damage": player.player_stats["Damage"],
+                                "Enemies Flashed": player.player_stats["Enemies Flashed"],
+                                "Utility Damage per Round in a Match": player.player_stats["Utility Damage per Round in a Match"],
+                                "Match Entry Success Rate": player.player_stats["Match Entry Success Rate"],
+                                "Sniper Kills": player.player_stats["Sniper Kills"],
+                                "Utility Enemies": player.player_stats["Utility Enemies"],
+                                "Pistol Kills": player.player_stats["Pistol Kills"]
                             }
                         })
                     }),
                     team_stats: {
-                        "Team Win": team.team_stats["Team Win"]
+                        "Team Win": team.team_stats["Team Win"],
+                        "Final Score": team.team_stats["Final Score"]
                     }
                 })),
                 round_stats: {
                     "Rounds": value.rounds[0].round_stats.Rounds,
-                    "Score": value.rounds[0].round_stats.Score
+                    "Score": value.rounds[0].round_stats.Score,
+                    "Map": value.rounds[0].round_stats.Map
                 }
             }]
         },
         cacheDate: Date.now(),
-        lastUsed: Date.now()
+        lastUsed: Date.now(),
+        version: CACHE_VERSION // Добавляем версию к кешируемому объекту
     };
 
     saveToDb(cachedValue).catch(err =>
@@ -185,21 +234,28 @@ async function cleanCache() {
         const currentTime = Date.now();
         const unusedTimeout = maxUnusedHours * 60 * 60 * 1000;
         let deleteCount = 0;
+        let updatedCount = 0;
 
         request.onsuccess = (event) => {
             const cursor = event.target.result;
             if (cursor) {
                 const value = cursor.value;
 
-                if ((currentTime - value.lastUsed) > unusedTimeout) {
+                // Удаляем записи, которые не использовались долго или имеют устаревшую версию
+                if ((currentTime - value.lastUsed) > unusedTimeout ||
+                    value.version === undefined ||
+                    value.version < CACHE_VERSION) {
                     store.delete(cursor.primaryKey);
                     cacheMap.delete(`${forecastCacheKeyPrefix}::${value.matchId}`);
                     deleteCount++;
                 }
                 cursor.continue();
             } else {
-                if (deleteCount > 0)
-                println(`Deleted ${deleteCount} old entries from IndexedDB`);
+                let message = '';
+                if (deleteCount > 0) {
+                    message += `Deleted ${deleteCount} old or outdated entries from IndexedDB`;
+                }
+                if (message) println(message);
                 resolve();
             }
         };
@@ -208,5 +264,38 @@ async function cleanCache() {
     });
 }
 
-initDB().catch(error);
-tryCleanCache();
+// Функция для обновления версии всех кешированных записей до текущей версии
+async function updateAllCacheVersions() {
+    if (!db) await initDB();
+
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.openCursor();
+    let updatedCount = 0;
+
+    return new Promise((resolve, reject) => {
+        request.onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (cursor) {
+                const value = cursor.value;
+                if (value.version !== CACHE_VERSION) {
+                    value.version = CACHE_VERSION;
+                    cursor.update(value);
+                    updatedCount++;
+                }
+                cursor.continue();
+            } else {
+                if (updatedCount > 0) {
+                    println(`Updated ${updatedCount} cache entries to version ${CACHE_VERSION}`);
+                }
+                resolve();
+            }
+        };
+        request.onerror = () => reject(request.error);
+    });
+}
+
+initDB().then(() => {
+    tryCleanCache();
+        loadMatchHistoryCache();
+}).catch(error);

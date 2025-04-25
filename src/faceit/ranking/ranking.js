@@ -47,12 +47,16 @@ const gameLevelRanges = {
 
 function insertAllLevelsToTable(table, currentLevel) {
     levelIcons.forEach((icon, level) => {
+        let svgNode = icon.cloneNode(true)
         const node = table.querySelector(`[class*=level-node-${level}]`);
         const span = node.getElementsByTagName("span")[0];
-        rankingModule.appendToAndHide(icon, span)
+        span.removeAttribute("title");
+        let svgSpan = svgNode.getElementsByTagName("span")[0];
+        let svgTitle = svgSpan.getAttribute("title");
+        svgSpan.removeAttribute("title");
+        svgSpan.setAttribute("styled-title", svgTitle)
+        rankingModule.appendToAndHide(svgNode.cloneNode(true), span);
         if (level === currentLevel) {
-            let svgNode = icon.cloneNode(true)
-            let svgSpan = svgNode.getElementsByTagName("span")[0];
             svgSpan.style.width = "36px";
             svgSpan.style.height = "36px";
             rankingModule.appendToAndHide(svgNode, table.querySelector("[class*=current-level]").getElementsByTagName("span")[0])
@@ -71,7 +75,7 @@ const rankingModule = new Module("ranking", async () => {
         node.remove();
         unsubscribe = subscribeGameTypeChange();
         newNode.classList.add(`forecast-statistic-table-${rankingModule.sessionId}`)
-        newNode.querySelector("div.level-progress-container > img").src = getImageResource("src/visual/icons/logo.png").toString();
+        newNode.querySelector("div.level-progress-container > .flex-between > img").src = getImageResource("src/visual/icons/logo256.png").toString();
         await insertAllStatisticToNewTable(newNode);
     }, () => { unsubscribe(); })
 })
@@ -90,7 +94,7 @@ async function insertAllStatisticToNewTable(table) {
     let currentEloNode = table.querySelector("[class*=current-elo]")
     currentEloNode.innerText = `${elo}`
     let currentLevelIcon = levelIcons.get(currentLevel);
-    let levelColor = currentLevelIcon.querySelector("div:nth-child(2) > span > svg > g > path:nth-child(3)").getAttribute("fill")
+    let levelColor = currentLevelIcon.querySelector("div > span > svg > g > path:nth-child(3)").getAttribute("fill")
     currentEloNode.style.setProperty("--glow-color", `${levelColor}B3`);
     let levelRanges = gameLevelRanges[gameType];
     table.querySelector("[class*=elo-need-to-reach]").innerText = `${currentLevel === levelRanges.length ? "" : levelRanges[currentLevel].min - elo}`

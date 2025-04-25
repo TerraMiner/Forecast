@@ -86,7 +86,7 @@ async function loadSettings() {
         }
 
         if (rangeSlider && sliderValueDisplay) {
-            const sliderValue = settings.sliderValue !== undefined ? settings.sliderValue : 20;
+            const sliderValue = settings.sliderValue !== undefined ? settings.sliderValue : 30;
             rangeSlider.value = sliderValue;
             sliderValueDisplay.textContent = sliderValue;
         }
@@ -124,6 +124,19 @@ function updateTabButtonLabels() {
     });
 }
 
+function setupInfoButtons() {
+    const infoButtons = document.querySelectorAll('.info-button');
+
+    infoButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const settingGroup = this.closest('.setting-group');
+            const description = settingGroup.querySelector('.setting-description');
+            description.classList.toggle('active');
+        });
+    });
+}
+
 window.addEventListener('message', (event) => {
     if (event.origin !== "https://www.faceit.com") return;
     if (event.data.action === 'setBackgroundColor') {
@@ -137,6 +150,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         await popupLoad();
         await loadManifestInfo();
         updateTabButtonLabels();
+        setupInfoButtons();
 
         const tabButtons = document.querySelectorAll('.tab-button');
         const categories = document.querySelectorAll('.settings-category');

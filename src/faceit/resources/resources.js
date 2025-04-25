@@ -3,7 +3,10 @@ const htmls = new Map();
 const images = new Map();
 
 const imageUrls = [
-    "src/visual/icons/logo.png",
+    "src/visual/icons/logo512.png",
+    "src/visual/icons/logo256.png",
+    "src/visual/icons/logo128.png",
+    "src/visual/icons/logo64.png",
 ];
 
 const htmlUrls = [
