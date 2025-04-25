@@ -126,8 +126,6 @@ const newLevelsModule = new Module("levels", async () => {
         switch (true) {
             case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/stats\/([^\/]+)$/.test(url):
                 return "stats";
-            case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)\/inventory.*/.test(url):
-                return "inventory";
             case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)(\/.*)?$/.test(url):
                 return "profile";
             case /^https:\/\/www\.faceit\.com\/\w+\/[\w\-]+\/room\/[\w\-]+(\/.*)?$/.test(url):
@@ -305,7 +303,9 @@ const newLevelsModule = new Module("levels", async () => {
                 node.id = matchmakingHolderId
             })
         })
-    } else if (lobbyType === "inventory") {
+    }
+
+    if (lobbyType === "profile" || lobbyType === "stats") {
         let selector = '[class*="styles__EloText"]';
         await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
             let uniqueCheck = () => node.matches(`[class*="${collectionLevelIconId}"]`)
