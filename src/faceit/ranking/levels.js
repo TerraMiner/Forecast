@@ -1,3 +1,5 @@
+let partySlots = new Map();
+
 class PartySlot {
     nick = null
 
@@ -128,10 +130,12 @@ const newLevelsModule = new Module("levels", async () => {
                 return "stats";
             case /^https:\/\/www\.faceit\.com\/[^\/]+\/players\/([^\/]+)(\/.*)?$/.test(url):
                 return "profile";
-            case /^https:\/\/www\.faceit\.com\/\w+\/[\w\-]+\/room\/[\w\-]+(\/.*)?$/.test(url):
+            case /^https:\/\/www\.faceit\.com\/[^\/]+\/[\w\-]+\/room\/[\w\-]+(\/.*)?$/.test(url):
                 return "matchroom";
-            case /^https:\/\/www\.faceit\.com\/\w+\/matchmaking.*/.test(url):
+            case /^https:\/\/www\.faceit\.com\/[^\/]+\/matchmaking.*/.test(url):
                 return "matchmaking";
+            case /^https:\/\/www\.faceit\.com\/[^\/]+\/parties.*/.test(url):
+                return "parties";
             default:
                 return null;
         }
@@ -202,7 +206,7 @@ const newLevelsModule = new Module("levels", async () => {
         let currentLevel = getLevel(elo, gameType);
         let iconSelector = '[class*="SkillIcon__StyledSvg"],[class*="BadgeHolder__Holder"]';
         await newLevelsModule.doAfterNodeAppear(iconSelector, (node) => {
-            if (!node.parentElement?.matches || !node.parentElement?.matches(`[class*=style__LevelHolder]`)) return;
+            if (!node.parentElement?.matches || (!node.parentElement?.matches(`[class*=style__LevelHolder]`) && !node.parentElement?.matches(`[class*=style__RankHolder]`))) return;
             if (!node.parentElement?.parentElement?.matches || !node.parentElement?.parentElement?.matches(`[class*=style__Wrapper]`)) return;
             if (!node.parentElement?.parentElement?.parentElement?.matches || !node.parentElement?.parentElement?.parentElement?.matches(`[class*=styles__StatsGraphPanelWrapper]`)) return;
             if (node.parentElement.parentElement.querySelector(`[class*='${newEloLevelIconId}']`)) return;
@@ -219,6 +223,7 @@ const newLevelsModule = new Module("levels", async () => {
                 if (lobbyType === "stats") {
                     icon.style.width = '38px';
                     icon.style.height = '38px';
+                    icon.style.marginBottom = '10px';
                 }
                 node.parentElement.prepend(icon)
                 node.parentElement.style.flexDirection = "column";
@@ -250,20 +255,26 @@ const newLevelsModule = new Module("levels", async () => {
             newTable.querySelector("[class~=master-max-value]").textContent = nextmin
         })
     } else if (lobbyType === "matchmaking") {
-        let partySlots = new Map();
         let selector = '[class*=Matchmaking__PlayHolder]';
-        let selector2 = 'main[class*="Layout__Container"] > div[class*="Header__Container"] > div:nth-child(2) > div > div > div:nth-child(1) > button > div > div:nth-child(1)'
-        await newLevelsModule.doAfterNodeAppear(selector2, async (node) => {
+        let selectorMidLevel = 'main[class*="Layout__Container"] > div[class*="Header__Container"] > div:nth-child(2) > div > div > div:nth-child(1) > button > div > div:nth-child(1)'
+        await newLevelsModule.doAfterNodeAppear(selectorMidLevel, async (node) => {
             if (node.querySelector("[class*=elowidgeticon]")) return
+
             let eloText = node.parentElement.querySelector('div:nth-child(2) > div:nth-child(2) > h5').innerText
-            let elo = parseInt(eloText.replace(/[\s,._]/g, ''), 10)
+            let elo = parseInt(eloText.replace(/[\s,._]/g, ''), 10);
             let level = getLevel(elo, "cs2");
+
+            let lvlTextNode = node.parentElement.querySelector('div:nth-child(2) > div:nth-child(1) > span');
+            let lvlText = lvlTextNode.innerText;
+            let lvlTextOrigin = lvlText.match(/.+ (\d+)/)[1];
+            lvlTextNode.innerText = lvlText.replace(lvlTextOrigin,level);
+
             let levelIcon = levelIcons.get(level).cloneNode(true);
             levelIcon.classList.add("elowidgeticon");
             let levelSpan = levelIcon.firstChild;
-            levelSpan.style.width = "58px"
-            levelSpan.style.height = "58px"
-            levelSpan.style.margin = "2px 0px"
+            levelSpan.style.width = "58px";
+            levelSpan.style.height = "58px";
+            levelSpan.style.margin = "2px 0px";
             node.appendChild(levelIcon);
         })
         await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
@@ -279,9 +290,10 @@ const newLevelsModule = new Module("levels", async () => {
                     if (partySlots.size < 5) {
                         let i = 0
                         Array.from(table.children).forEach((slot) => {
-                            if (slot.id !== `party-slot-${i}`) {
-                                slot.id = `party-slot-${i}`
-                                partySlots.set(`party-slot-${i}`, new PartySlot(slot, i))
+                            let id = `party-slot-${i}`;
+                            if (!slot.classList.contains(id)) {
+                                slot.classList.add(id)
+                                partySlots.set(id, new PartySlot(slot, i))
                             }
                             i++
                         })
@@ -293,7 +305,7 @@ const newLevelsModule = new Module("levels", async () => {
                         slot.removeOldIcon()
                         if (!slot.isNeedRemove() && !slot.isEmpty) {
                             partySlots.delete(id)
-                            slot.slotNode.id = ""
+                            slot.slotNode.classList.remove(id)
                             if (slot.newIcon) slot.newIcon.remove()
                             continue
                         }
@@ -305,7 +317,7 @@ const newLevelsModule = new Module("levels", async () => {
         })
     }
 
-    if (lobbyType === "profile" || lobbyType === "stats") {
+    if (lobbyType === "profile" || lobbyType === "stats" || lobbyType === "parties") {
         let selector = '[class*="styles__EloText"]';
         await newLevelsModule.doAfterNodeAppear(selector, async (node) => {
             let uniqueCheck = () => node.matches(`[class*="${collectionLevelIconId}"]`)
@@ -345,6 +357,11 @@ const newLevelsModule = new Module("levels", async () => {
             })
         })
     })
+}, () => {
+    partySlots.forEach((slot, key) => {
+        slot.slotNode.classList.remove(key)
+    })
+    partySlots.clear();
 })
 
 function getStatistic(playerStatistic) {

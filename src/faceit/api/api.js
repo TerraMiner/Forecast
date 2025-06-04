@@ -101,7 +101,7 @@ function extractPlayerNick() {
 function extractGameType() {
     const match = window.location.href.match(/stats\/([a-zA-Z0-9-_]+)/);
     if (match) return match[1];
-    const fallbackMatch = window.location.href.match(/\/[a-z]{2}\/([a-zA-Z0-9-_]+)/);
+    const fallbackMatch = window.location.href.match(/\/([a-zA-Z0-9-_]+)\/room/);
     return fallbackMatch ? fallbackMatch[1] : null;
 }
 
