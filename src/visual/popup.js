@@ -117,7 +117,8 @@ function updateTabButtonLabels() {
         const tabLabels = {
             "general": "General",
             "features": "Features",
-            "about": "About"
+            "about": "About",
+            "donate": "Donate"
         };
 
         button.innerHTML = `<span>${tabLabels[tabName] || tabName}</span>`;

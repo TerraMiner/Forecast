@@ -96,7 +96,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 20px;
+    /*margin-bottom: 20px;*/
     padding: 0 10px;
     min-height: 80px;
 }
@@ -141,7 +141,7 @@ body {
 .extension-title {
     font-size: 16px;
     font-weight: bold;
-    margin: 5px 0;
+    margin-bottom: 10px;
     color: #FFFFFF;
     letter-spacing: 1px;
     text-align: center;
@@ -226,6 +226,10 @@ body {
     background-image: url('icons/info.svg');
 }
 
+.tab-button[data-tab="donate"]::after {
+    background-image: url('icons/donate.svg');
+}
+
 .sidebar:hover .tab-button {
     width: 100%;
     text-align: left;
@@ -261,7 +265,7 @@ body {
 .description-box {
     background-color: #202020;
     border-radius: 10px;
-    padding: 15px;
+    padding: 0 15px 15px;
     margin-bottom: 20px;
     border: 1px solid #393a43;
     font-size: 14px;
@@ -284,9 +288,8 @@ body {
     margin: 0;
 }
 
-.description-box p:first-child {
+.description-box-bold p:first-child {
     font-weight: bold;
-    padding-top: 0;
 }
 
 .description-box p {
