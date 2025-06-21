@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
   "name": "FACEIT FORECAST",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "A convenient extension for detailed statistics on Faceit.",
   "default_locale": "en",
   "author": "TerraMiner",
+  "license": "GPL-3.0-or-later",
   "permissions": ["storage"],
   "icons": {
     "64": "src/visual/icons/logo64.png",

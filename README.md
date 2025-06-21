@@ -30,4 +30,4 @@ This project is a browser extension that retrieves and displays statistics for F
 
 ## License
 
-This project is licensed under the MIT License. See the [`LICENSE`](https://github.com/TerraMiner/Forecast/blob/master/LICENSE) file for details.
+Faceit Forecast is licensed under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html).
