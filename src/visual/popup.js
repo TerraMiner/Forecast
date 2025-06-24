@@ -18,163 +18,176 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-const FIREFOX = "FIREFOX"
-const CHROMIUM = "CHROMIUM"
+const BROWSER_TYPE = typeof browser !== 'undefined' ? 'FIREFOX' : 'CHROMIUM';
+const CS2_MAPS = ['de_dust2', 'de_mirage', 'de_nuke', 'de_ancient', 'de_train', 'de_inferno', 'de_anubis'];
+const TAB_LABELS = {
+    "general": "General",
+    "features": "Features",
+    "about": "About",
+    "donate": "Donate"
+};
 
-const browserType = typeof browser !== 'undefined' ? FIREFOX : CHROMIUM
+const StorageUtils = {
+    get api() {
+        return BROWSER_TYPE === 'FIREFOX' ? browser.storage.sync : chrome.storage.sync;
+    },
 
-async function getStorage(keys) {
-    return new Promise((resolve, reject) => {
-        const storageAPI = browserType === "FIREFOX" ? browser.storage.sync : chrome.storage.sync;
+    async get(keys) {
+        return new Promise((resolve, reject) => {
+            if (this.api) {
+                this.api.get(keys, resolve);
+            } else {
+                reject("Storage API not available.");
+            }
+        });
+    },
 
-        if (storageAPI) {
-            storageAPI.get(keys, resolve);
-        } else {
-            reject("Storage API not available.");
-        }
-    });
-}
-
-async function setStorage(items) {
-    return new Promise((resolve, reject) => {
-        const storageAPI = browserType === "FIREFOX" ? browser.storage.sync : chrome.storage.sync;
-
-        if (storageAPI) {
-            storageAPI.set(items, resolve);
-        } else {
-            reject("Storage API not available.");
-        }
-    });
-}
-
-async function loadManifestInfo() {
-    const runtime = browserType === "FIREFOX" ? browser.runtime : chrome.runtime;
-    const manifest = runtime.getManifest()
-
-    const versionElement = document.getElementById('version');
-    if (versionElement) {
-        versionElement.textContent = manifest.version;
+    async set(items) {
+        return new Promise((resolve, reject) => {
+            if (this.api) {
+                this.api.set(items, resolve);
+            } else {
+                reject("Storage API not available.");
+            }
+        });
     }
+};
 
-    const authorElement = document.getElementById('author');
-    if (authorElement) {
-        authorElement.textContent = manifest.author;
-    }
-}
+const SettingsManager = {
+    defaults: {
+        isEnabled: true,
+        sliderValue: 30,
+        matchroom: true,
+        eloranking: true,
+        matchhistory: true,
+        poscatcher: false
+    },
 
-async function popupLoad() {
-    try {
-        const settings = await getStorage(['isEnabled']);
-        const enabled = settings.isEnabled !== undefined ? settings.isEnabled : true;
-        const toggleExtension = document.getElementById('toggleExtension');
+    async load() {
+        try {
+            const keys = ['isEnabled', 'sliderValue', 'matchroom', 'eloranking', 'matchhistory', 'poscatcher',
+                ...CS2_MAPS.flatMap(map => [`${map}Enabled`, `${map}Message`])];
 
-        if (toggleExtension) {
-            toggleExtension.checked = enabled;
-        } else {
-            console.error("Toggle switch not found!");
+            const settings = await StorageUtils.get(keys);
+
+            this.applySettings(settings);
+
+            this.loadQuickPositionSettings(settings);
+
+        } catch (error) {
+            console.error("Error loading settings:", error);
         }
+    },
 
-    } catch (error) {
-        console.error("Error loading settings:", error);
-    }
-}
-
-async function loadSettings() {
-    try {
-        const settings = await getStorage(['isEnabled', 'sliderValue', 'matchroom', 'eloranking', 'matchhistory']);
-        const rangeSlider = document.getElementById('rangeSlider');
-        const sliderValueDisplay = document.getElementById('sliderValue');
-
-        const toggleExtension = document.getElementById('toggleExtension');
-        if (toggleExtension) {
-            toggleExtension.checked = settings.isEnabled !== undefined ? settings.isEnabled : true;
-        }
-
-        const toggleMatchRoom = document.getElementById('matchroom');
-        if (toggleMatchRoom) {
-            toggleMatchRoom.checked = settings.matchroom !== undefined ? settings.matchroom : true;
-        }
-
-        const toggleEloRanking = document.getElementById('eloranking');
-        if (toggleEloRanking) {
-            toggleEloRanking.checked = settings.eloranking !== undefined ? settings.eloranking : true;
-        }
-
-        const toggleAdvancedMatchHistory = document.getElementById('matchhistory');
-        if (toggleAdvancedMatchHistory) {
-            toggleAdvancedMatchHistory.checked = settings.matchhistory !== undefined ? settings.matchhistory : true;
-        }
-
-        if (rangeSlider && sliderValueDisplay) {
-            const sliderValue = settings.sliderValue !== undefined ? settings.sliderValue : 30;
-            rangeSlider.value = sliderValue;
-            sliderValueDisplay.textContent = sliderValue;
-        }
-    } catch (error) {
-        console.error("Error loading settings:", error);
-    }
-}
-
-async function saveSettings() {
-    const isEnabled = document.getElementById('toggleExtension').checked;
-    const sliderValue = parseInt(document.getElementById('rangeSlider').value, 10);
-    const matchroom = document.getElementById('matchroom').checked;
-    const eloranking = document.getElementById('eloranking').checked;
-    const matchhistory = document.getElementById('matchhistory').checked;
-
-    try {
-        await setStorage({isEnabled, sliderValue, matchroom, eloranking, matchhistory});
-    } catch (error) {
-        console.error("Error saving settings:", error);
-    }
-}
-
-function updateTabButtonLabels() {
-    const tabButtons = document.querySelectorAll('.tab-button');
-
-    tabButtons.forEach(button => {
-        const tabName = button.getAttribute('data-tab');
-        const tabLabels = {
-            "general": "General",
-            "features": "Features",
-            "about": "About",
-            "donate": "Donate"
+    applySettings(settings) {
+        const elements = {
+            toggleExtension: 'isEnabled',
+            rangeSlider: 'sliderValue',
+            matchroom: 'matchroom',
+            eloranking: 'eloranking',
+            matchhistory: 'matchhistory'
         };
 
-        button.innerHTML = `<span>${tabLabels[tabName] || tabName}</span>`;
-    });
-}
+        Object.entries(elements).forEach(([elementId, settingKey]) => {
+            const element = document.getElementById(elementId);
+            if (!element) return;
 
-function setupInfoButtons() {
-    const infoButtons = document.querySelectorAll('.info-button');
+            const value = settings[settingKey] ?? this.defaults[settingKey];
 
-    infoButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            const settingGroup = this.closest('.setting-group');
-            const description = settingGroup.querySelector('.setting-description');
-            description.classList.toggle('active');
+            if (element.type === 'checkbox') {
+                element.checked = value;
+            } else if (element.type === 'range') {
+                element.value = value;
+                const display = document.getElementById('sliderValue');
+                if (display) display.textContent = value;
+            }
         });
-    });
-}
 
-window.addEventListener('message', (event) => {
-    if (event.origin !== "https://www.faceit.com") return;
-    if (event.data.action === 'setBackgroundColor') {
-        document.body.style.backgroundColor = event.data.color;
+        const matchroomEnabled = settings.matchroom ?? this.defaults.matchroom;
+        this.updateDependentSettings('matchroom', ['#analyzeLimit'], matchroomEnabled);
+    },
+
+    loadQuickPositionSettings(settings) {
+        const quickPositionToggle = document.getElementById('poscatcher');
+        if (quickPositionToggle) {
+            quickPositionToggle.checked = settings.poscatcher ?? this.defaults.poscatcher;
+        }
+
+        CS2_MAPS.forEach(map => {
+            const enabledToggle = document.getElementById(`${map}Enabled`);
+            const messageInput = document.getElementById(`${map}Message`);
+            const counter = document.getElementById(`${map}Counter`);
+
+            if (enabledToggle) {
+                enabledToggle.checked = settings[`${map}Enabled`] || false;
+            }
+
+            if (messageInput) {
+                messageInput.value = settings[`${map}Message`] || '';
+                if (counter) {
+                    counter.textContent = messageInput.value.length;
+                    UIUtils.updateCharCounter(counter, messageInput.value.length, 100);
+                }
+            }
+        });
+
+        this.updateMapSettingsVisibility(quickPositionToggle?.checked ?? this.defaults.poscatcher);
+    },
+
+    async save(data) {
+        try {
+            await StorageUtils.set(data);
+        } catch (error) {
+            console.error("Error saving settings:", error);
+        }
+    },
+
+    updateDependentSettings(parentId, dependentSelectors, isEnabled) {
+        dependentSelectors.forEach(selector => {
+            const element = document.querySelector(selector);
+            if (element) {
+                element.classList.toggle('visible', isEnabled);
+            }
+        });
+    },
+
+    updateMapSettingsVisibility(isEnabled) {
+        const mapSettings = document.getElementById('mapSettings');
+        if (mapSettings) {
+            mapSettings.classList.toggle('visible', isEnabled);
+        }
+    },
+
+    updateMapSpecificVisibility(mapName, isEnabled) {
+        const mapSettingsElement = document.getElementById(`${mapName}Settings`);
+        if (mapSettingsElement) {
+            mapSettingsElement.classList.toggle('visible', isEnabled);
+        }
     }
-}, false);
+};
 
-document.addEventListener("DOMContentLoaded", async () => {
-    try {
-        await loadSettings();
-        await popupLoad();
-        await loadManifestInfo();
-        updateTabButtonLabels();
-        setupInfoButtons();
+const UIUtils = {
+    updateCharCounter(counter, currentLength, maxLength) {
+        const percentage = (currentLength / maxLength) * 100;
+        const parent = counter.parentElement;
 
+        parent.classList.remove('warning', 'error');
+
+        if (percentage >= 90) {
+            parent.classList.add('error');
+        } else if (percentage >= 75) {
+            parent.classList.add('warning');
+        }
+    },
+
+    setupTabs() {
         const tabButtons = document.querySelectorAll('.tab-button');
         const categories = document.querySelectorAll('.settings-category');
+
+        tabButtons.forEach(button => {
+            const tabName = button.getAttribute('data-tab');
+            button.innerHTML = `<span>${TAB_LABELS[tabName] || tabName}</span>`;
+        });
 
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -185,38 +198,54 @@ document.addEventListener("DOMContentLoaded", async () => {
                 document.getElementById(button.getAttribute('data-tab')).classList.add('active-category');
             });
         });
+    },
 
-        const toggleExtension = document.getElementById('toggleExtension');
-        if (toggleExtension) {
-            toggleExtension.addEventListener('change', async function () {
-                const isEnabled = this.checked;
-                await setStorage({isEnabled});
-            });
-        }
+    setupInfoButtons() {
+        const infoButtons = document.querySelectorAll('.info-button:not(.nested-info-button)');
 
-        const matchroom = document.getElementById('matchroom');
-        if (matchroom) {
-            matchroom.addEventListener('change', async function () {
-                const matchroom = this.checked;
-                await setStorage({matchroom});
+        infoButtons.forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
+                const settingGroup = this.closest('.setting-group');
+                const description = settingGroup.querySelector('.setting-description');
+                description.classList.toggle('active');
             });
-        }
+        });
+    },
 
-        const eloranking = document.getElementById('eloranking');
-        if (eloranking) {
-            eloranking.addEventListener('change', async function () {
-                const eloranking = this.checked;
-                await setStorage({eloranking});
-            });
-        }
+    async loadManifestInfo() {
+        const runtime = BROWSER_TYPE === 'FIREFOX' ? browser.runtime : chrome.runtime;
+        const manifest = runtime.getManifest();
 
-        const matchhistory = document.getElementById('matchhistory');
-        if (matchhistory) {
-            matchhistory.addEventListener('change', async function () {
-                const matchhistory = this.checked;
-                await setStorage({matchhistory});
+        const elements = {
+            version: manifest.version,
+            author: manifest.author
+        };
+
+        Object.entries(elements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        });
+    }
+};
+
+const EventHandlers = {
+    setupMainEventListeners() {
+        const toggles = ['toggleExtension', 'matchroom', 'eloranking', 'matchhistory'];
+
+        toggles.forEach(toggleId => {
+            const element = document.getElementById(toggleId);
+            if (!element) return;
+
+            element.addEventListener('change', async function () {
+                const key = toggleId === 'toggleExtension' ? 'isEnabled' : toggleId;
+                await SettingsManager.save({[key]: this.checked});
+
+                if (toggleId === 'matchroom') {
+                    SettingsManager.updateDependentSettings('matchroom', ['#analyzeLimit'], this.checked);
+                }
             });
-        }
+        });
 
         const rangeSlider = document.getElementById('rangeSlider');
         const sliderValueDisplay = document.getElementById('sliderValue');
@@ -224,25 +253,86 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (rangeSlider && sliderValueDisplay) {
             rangeSlider.addEventListener('input', async function () {
                 sliderValueDisplay.textContent = this.value;
-                await saveSettings();
+                await SettingsManager.save({sliderValue: parseInt(this.value, 10)});
             });
         }
 
+        this.setupCopyButton();
+    },
+
+    setupCopyButton() {
         let notificationTimeout = null;
+        const copyButton = document.getElementById('copyButton');
 
-        document.getElementById('copyButton').addEventListener('click', () => {
-            navigator.clipboard.writeText("forecast.extension@gmail.com").then(() => {
-                const notification = document.getElementById('notification');
-                notification.classList.add('show');
+        if (copyButton) {
+            copyButton.addEventListener('click', () => {
+                navigator.clipboard.writeText("forecast.extension@gmail.com").then(() => {
+                    const notification = document.getElementById('notification');
+                    notification.classList.add('show');
 
-                if (notificationTimeout) clearTimeout(notificationTimeout);
+                    if (notificationTimeout) clearTimeout(notificationTimeout);
 
-                notificationTimeout = setTimeout(() => {
-                    notification.classList.remove('show');
-                    notificationTimeout = null;
-                }, 2000);
+                    notificationTimeout = setTimeout(() => {
+                        notification.classList.remove('show');
+                        notificationTimeout = null;
+                    }, 2000);
+                });
             });
+        }
+    },
+
+    setupQuickPositionEventListeners() {
+        const quickPositionToggle = document.getElementById('poscatcher');
+        if (quickPositionToggle) {
+            quickPositionToggle.addEventListener('change', async function () {
+                await SettingsManager.save({poscatcher: this.checked});
+                SettingsManager.updateMapSettingsVisibility(this.checked);
+            });
+        }
+
+        CS2_MAPS.forEach(map => {
+            const enabledToggle = document.getElementById(`${map}Enabled`);
+            if (enabledToggle) {
+                enabledToggle.addEventListener('change', async function () {
+                    await SettingsManager.save({[`${map}Enabled`]: this.checked});
+                    SettingsManager.updateMapSpecificVisibility(map, this.checked);
+                });
+            }
+
+            const messageInput = document.getElementById(`${map}Message`);
+            const counter = document.getElementById(`${map}Counter`);
+
+            if (messageInput && counter) {
+                messageInput.addEventListener('input', async function () {
+                    const length = this.value.length;
+                    counter.textContent = length;
+                    UIUtils.updateCharCounter(counter, length, 16);
+                    await SettingsManager.save({[`${map}Message`]: this.value});
+                });
+            }
         });
+    }
+};
+
+window.addEventListener('message', (event) => {
+    if (event.origin !== "https://www.faceit.com") return;
+    if (event.data.action === 'setBackgroundColor') {
+        document.body.style.backgroundColor = event.data.color;
+    }
+}, false);
+
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        await Promise.all([
+            SettingsManager.load(),
+            UIUtils.loadManifestInfo()
+        ]);
+
+        UIUtils.setupTabs();
+        UIUtils.setupInfoButtons();
+
+        EventHandlers.setupMainEventListeners();
+        EventHandlers.setupQuickPositionEventListeners();
 
     } catch (error) {
         console.error("Error during DOMContentLoaded:", error);

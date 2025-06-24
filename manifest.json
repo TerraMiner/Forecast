@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FACEIT FORECAST",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "A convenient extension for detailed statistics on Faceit.",
   "default_locale": "en",
   "author": "TerraMiner",
@@ -37,6 +37,7 @@
         "src/module/module.js",
         "src/faceit/resources/resources.js",
         "src/faceit/room/matchroom.js",
+        "src/faceit/poscatcher/poscatch.js",
         "src/faceit/history/matchhistorycache.js",
         "src/faceit/history/matchroom-popup.js",
         "src/faceit/history/matchhistory.js",

@@ -133,7 +133,6 @@ class MatchNodeByMatchStats {
             "Match Entry Success Rate": matchEntrySuccessRate,
         } = this.matchStats;
 
-        // Парсинг основных значений
         const rounds = this.rounds;
         const kills = parseInt(k, 10);
         const deaths = parseInt(d, 10);
@@ -143,13 +142,11 @@ class MatchNodeByMatchStats {
         const adrValue = parseFloat(adr);
         const totalDamage = parseInt(damage, 10) || adrValue * rounds;
 
-        // Вспомогательные функции
         const safeInt = str => parseInt(str, 10) || 0;
         const safeFloat = str => parseFloat(str) || 0;
         const safeRatio = (a, b) => a / Math.max(1, b);
         const bonusIf = (value, threshold, factor) => value > threshold ? (value - threshold) * factor : 0;
 
-        // Парсинг дополнительных значений
         const mvpsValue = safeInt(mvps);
         const firstKillsValue = safeInt(firstKills);
         const entryWinsValue = safeInt(entryWins);

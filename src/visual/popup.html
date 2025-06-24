@@ -44,6 +44,7 @@
                         <li>Shows player statistics in match history</li>
                         <li>Provides access to match tabs from history</li>
                         <li>Calculates win rates for teams and players in the match room</li>
+                        <li>Allows you to specify a message sent when a map is selected in the game lobby</li>
                     </ul>
                 </div>
             </div>
@@ -133,12 +134,24 @@
                         </p>
                         <p>This helps better assess team strengths on specific maps before the game starts.</p>
                     </div>
+
+                    <div class="nested-setting visible" id="analyzeLimit">
+                        <div class="setting-item">
+                            <div class="setting-header">
+                                <label>Match Amount</label>
+                            </div>
+                            <div class="slider-controls">
+                                <input type="range" id="rangeSlider" class="range-slider" min="5" max="100" value="30">
+                                <span id="sliderValue">30</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="setting-group">
-                    <div class="setting-item slider-container">
+                    <div class="setting-item">
                         <div class="setting-header">
-                            <span class="limit-label">Match Analyze Limit</span>
+                            <label>Quick Position Setup</label>
                             <button class="info-button" aria-label="Show more information">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -149,14 +162,114 @@
                                 </svg>
                             </button>
                         </div>
-                        <div class="slider-controls">
-                            <input type="range" id="rangeSlider" class="range-slider" min="5" max="100" value="30">
-                            <span id="sliderValue">30</span>
-                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="poscatcher" checked>
+                            <span class="slider"></span>
+                        </label>
                     </div>
                     <div class="setting-description">
-                        <p>It lets you adjust the number of matches used for analysis within a match.</p>
-                        <p>Has no effect if the 'Extended in-match info' setting is turned off.</p>
+                        <p>Enables quick position setup for CS2 maps with custom messages.</p>
+                        <p>You can set custom messages for each map that will be sent automatically when joining a match.</p>
+                    </div>
+
+                    <div class="nested-setting visible" id="mapSettings">
+                        <div class="setting-item map-setting">
+                            <div class="setting-header">
+                                <label>Dust 2</label>
+                            </div>
+                            <div class="text-input-container">
+                                <input type="text" id="de_dust2Message" placeholder="Message..." maxlength="16">
+                                <span class="char-counter"><span id="de_dust2Counter">0</span>/16</span>
+                            </div>
+                            <label class="switch map-switch">
+                                <input type="checkbox" id="de_dust2Enabled">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item map-setting">
+                            <div class="setting-header">
+                                <label>Mirage</label>
+                            </div>
+                            <div class="text-input-container">
+                                <input type="text" id="de_mirageMessage" placeholder="Message..." maxlength="16">
+                                <span class="char-counter"><span id="de_mirageCounter">0</span>/16</span>
+                            </div>
+                            <label class="switch map-switch">
+                                <input type="checkbox" id="de_mirageEnabled">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item map-setting">
+                            <div class="setting-header">
+                                <label>Nuke</label>
+                            </div>
+                            <div class="text-input-container">
+                                <input type="text" id="de_nukeMessage" placeholder="Message..." maxlength="16">
+                                <span class="char-counter"><span id="de_nukeCounter">0</span>/16</span>
+                            </div>
+                            <label class="switch map-switch">
+                                <input type="checkbox" id="de_nukeEnabled">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item map-setting">
+                            <div class="setting-header">
+                                <label>Ancient</label>
+                            </div>
+                            <div class="text-input-container">
+                                <input type="text" id="de_ancientMessage" placeholder="Message..." maxlength="16">
+                                <span class="char-counter"><span id="de_ancientCounter">0</span>/16</span>
+                            </div>
+                            <label class="switch map-switch">
+                                <input type="checkbox" id="de_ancientEnabled">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item map-setting">
+                            <div class="setting-header">
+                                <label>Train</label>
+                            </div>
+                            <div class="text-input-container">
+                                <input type="text" id="de_trainMessage" placeholder="Message..." maxlength="16">
+                                <span class="char-counter"><span id="de_trainCounter">0</span>/16</span>
+                            </div>
+                            <label class="switch map-switch">
+                                <input type="checkbox" id="de_trainEnabled">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item map-setting">
+                            <div class="setting-header">
+                                <label>Inferno</label>
+                            </div>
+                            <div class="text-input-container">
+                                <input type="text" id="de_infernoMessage" placeholder="Message..." maxlength="16">
+                                <span class="char-counter"><span id="de_infernoCounter">0</span>/16</span>
+                            </div>
+                            <label class="switch map-switch">
+                                <input type="checkbox" id="de_infernoEnabled">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item map-setting">
+                            <div class="setting-header">
+                                <label>Anubis</label>
+                            </div>
+                            <div class="text-input-container">
+                                <input type="text" id="de_anubisMessage" placeholder="Message..." maxlength="16">
+                                <span class="char-counter"><span id="de_anubisCounter">0</span>/16</span>
+                            </div>
+                            <label class="switch map-switch">
+                                <input type="checkbox" id="de_anubisEnabled">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>

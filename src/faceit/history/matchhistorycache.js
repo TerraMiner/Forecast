@@ -56,7 +56,7 @@ async function initDB() {
                 const store = db.createObjectStore(STORE_NAME, {keyPath: 'matchId'});
                 store.createIndex('cacheDate', 'cacheDate');
                 store.createIndex('lastUsed', 'lastUsed');
-                store.createIndex('version', 'version'); // Добавлен индекс для версии
+                store.createIndex('version', 'version');
             }
         };
     });
@@ -73,7 +73,6 @@ async function loadMatchHistoryCache() {
         request.onsuccess = () => {
             const matches = request.result;
             matches.forEach(match => {
-                // Загружаем только записи с актуальной версией
                 if (match.version === CACHE_VERSION) {
                     cacheMap.set(`${forecastCacheKeyPrefix}::${match.matchId}`, match);
                 }
@@ -93,13 +92,11 @@ async function getFromCacheOrFetch(key, fetch) {
     if (cacheMap.has(cacheKey)) {
         const cachedData = cacheMap.get(cacheKey);
 
-        // Проверяем версию кеша
         if (cachedData.version === CACHE_VERSION) {
             cachedData.lastUsed = Date.now();
             await updateLastUsed(key, cachedData.lastUsed);
             return Promise.resolve(cachedData.data);
         } else {
-            // Если версия устарела, удаляем из кеша
             cacheMap.delete(cacheKey);
         }
     }
@@ -128,7 +125,6 @@ async function getFromCacheOrFetch(key, fetch) {
                             nickname: player.nickname,
                             player_id: player.player_id,
                             player_stats: {
-                                // Уже существующие поля
                                 "Kills": player.player_stats.Kills,
                                 "Assists": player.player_stats.Assists,
                                 "Deaths": player.player_stats.Deaths,
@@ -191,7 +187,7 @@ async function getFromCacheOrFetch(key, fetch) {
         },
         cacheDate: Date.now(),
         lastUsed: Date.now(),
-        version: CACHE_VERSION // Добавляем версию к кешируемому объекту
+        version: CACHE_VERSION
     };
 
     saveToDb(cachedValue).catch(err =>
@@ -261,7 +257,6 @@ async function cleanCache() {
             if (cursor) {
                 const value = cursor.value;
 
-                // Удаляем записи, которые не использовались долго или имеют устаревшую версию
                 if ((currentTime - value.lastUsed) > unusedTimeout ||
                     value.version === undefined ||
                     value.version < CACHE_VERSION) {
@@ -280,37 +275,6 @@ async function cleanCache() {
             }
         };
 
-        request.onerror = () => reject(request.error);
-    });
-}
-
-// Функция для обновления версии всех кешированных записей до текущей версии
-async function updateAllCacheVersions() {
-    if (!db) await initDB();
-
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.openCursor();
-    let updatedCount = 0;
-
-    return new Promise((resolve, reject) => {
-        request.onsuccess = (event) => {
-            const cursor = event.target.result;
-            if (cursor) {
-                const value = cursor.value;
-                if (value.version !== CACHE_VERSION) {
-                    value.version = CACHE_VERSION;
-                    cursor.update(value);
-                    updatedCount++;
-                }
-                cursor.continue();
-            } else {
-                if (updatedCount > 0) {
-                    println(`Updated ${updatedCount} cache entries to version ${CACHE_VERSION}`);
-                }
-                resolve();
-            }
-        };
         request.onerror = () => reject(request.error);
     });
 }

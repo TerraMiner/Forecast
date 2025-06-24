@@ -166,7 +166,7 @@ async function displayWinRates(matchDetails) {
     const team1 = matchDetails["teams"]["faction1"];
     const team2 = matchDetails["teams"]["faction2"];
 
-    const matchAmount = await getMatchAmount();
+    const matchAmount = await getSettingValue('sliderValue',30);
 
     const team1Promises = team1["roster"].map(player =>
         calculateStats(`${team1.name}$roster1`, player["player_id"], matchAmount)

@@ -92,16 +92,16 @@ function chunkArray(arr, size) {
     return result;
 }
 
-async function getMatchAmount() {
+async function getSettingValue(name, def) {
     return new Promise((resolve, reject) => {
         const storageAPI = browserType === FIREFOX ? browser.storage.sync : chrome.storage.sync;
 
-        storageAPI.get(['sliderValue'], (result) => {
+        storageAPI.get([name], (result) => {
             const errorMessage = browserType === FIREFOX ? browser.runtime.lastError : chrome.runtime.lastError;
             if (errorMessage) {
                 reject(new Error(errorMessage));
             } else {
-                const sliderValue = result.sliderValue !== undefined ? result.sliderValue : 20;
+                const sliderValue = result[name] !== undefined ? result[name] : def;
                 resolve(sliderValue);
             }
         });
@@ -121,7 +121,7 @@ async function isSettingEnabled(name) {
         });
     });
 
-    return settings[name] !== undefined ? settings[name] : true;
+    return settings[name] !== undefined ? settings[name] : false;
 }
 
 async function isExtensionEnabled() {

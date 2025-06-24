@@ -87,7 +87,7 @@
 
 .progress {
     height: 100%;
-    width: 60%; /* Example width, would be dynamic */
+    width: 60%;
     border-radius: 3px;
     position: relative;
     background: #ff5500;
@@ -693,7 +693,6 @@ tr[class*="MatchHistoryTableRow"] {
 }
 
 .player-background-table th {
-    /*position: relative;*/
     background-color: rgb(37, 37, 37);
     font-weight: 600;
     font-size: 0.9rem;
@@ -727,17 +726,14 @@ tr[class*="MatchHistoryTableRow"] {
     border-bottom: none;
 }
 
-/* Стилизация для Winrate колонки */
 .player-background-table td:nth-child(3) {
     font-weight: bold;
 }
 
-/* Полосатый эффект для строк */
 .player-background-table tbody tr:nth-child(even) td {
     background-color: rgba(255, 255, 255, 0.02);
 }
 
-/* Адаптивность для маленьких экранов */
 @media (max-width: 768px) {
     .player-background-table {
         padding: 10px 0;
@@ -811,11 +807,10 @@ tr[class*="MatchHistoryTableRow"] {
 }
 
 .team-background-table th {
-    /*position: relative;*/
     background-color: rgb(37, 37, 37);
     font-weight: 600;
     font-size: 0.9rem;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     position: sticky;
     top: 0;
 }
