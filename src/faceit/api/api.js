@@ -44,10 +44,6 @@ async function fetchV4Cached(cache, url, errorMsg) {
     return cache.get(url) || cache.set(url, await fetchV4(url, errorMsg)).get(url);
 }
 
-async function fetchMatch(matchId) {
-    return fetchV4(`${baseUrlV4}/matches/${matchId}`, "Error when retrieving match statistics");
-}
-
 async function fetchMatchStats(matchId) {
     return fetchV4Cached(
         matchDataCache,
