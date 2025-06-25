@@ -44,6 +44,7 @@ const posCatcherModule = new Module("poscatcher", async () => {
             const key = node.innerText.trim();
             if (!key) return;
             const mapPick = maps[key];
+            if (!mapPick) return
             if (!await isSettingEnabled(`${mapPick}Enabled`)) return
             let message = await getSettingValue(`${mapPick}Message`, "")
             if (typeof message !== "string" || message.trim() === "") return
