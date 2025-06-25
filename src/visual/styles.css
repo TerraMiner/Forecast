@@ -357,6 +357,22 @@ body {
     padding-inline-start: 20px;
 }
 
+.beta-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f50;
+    color: #121212;
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-left: 8px;
+    user-select: none;
+}
+
 .description-box {
     background-color: #202020;
     border-radius: 10px;
