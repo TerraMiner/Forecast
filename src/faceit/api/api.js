@@ -26,13 +26,9 @@ const matchDataCache = new Map();
 const oldMatchDataCache = new Map();
 const matchDataStatsCache = new Map();
 
-async function fetchV4(cache, url, errorMsg) {
-    const cachedData = cache.get(url);
-    if (cachedData) return cachedData;
-
+async function fetchV4(url, errorMsg) {
     const apiKey = await getApiKey();
-    const response = await fetch(url, {
-        method: 'GET',
+    const res = await fetch(url, {
         headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
@@ -40,17 +36,20 @@ async function fetchV4(cache, url, errorMsg) {
         credentials: 'include'
     });
 
-    if (!response.ok) {
-        throw new Error(`${errorMsg}: ${response.statusText}`);
-    }
+    if (!res.ok) throw new Error(`${errorMsg}: ${res.statusText}`);
+    return res.json();
+}
 
-    const newData = await response.json();
-    cache.set(url, newData);
-    return newData;
+async function fetchV4Cached(cache, url, errorMsg) {
+    return cache.get(url) || cache.set(url, await fetchV4(url, errorMsg)).get(url);
+}
+
+async function fetchMatch(matchId) {
+    return fetchV4(`${baseUrlV4}/matches/${matchId}`, "Error when retrieving match statistics");
 }
 
 async function fetchMatchStats(matchId) {
-    return fetchV4(
+    return fetchV4Cached(
         matchDataCache,
         `${baseUrlV4}/matches/${matchId}`,
         "Error when retrieving match statistics"
@@ -58,7 +57,7 @@ async function fetchMatchStats(matchId) {
 }
 
 async function fetchMatchStatsDetailed(matchId) {
-    return fetchV4(
+    return fetchV4Cached(
         matchDataStatsCache,
         `${baseUrlV4}/matches/${matchId}/stats`,
         "Error when retrieving detailed match statistics"
@@ -67,7 +66,7 @@ async function fetchMatchStatsDetailed(matchId) {
 
 async function fetchPlayerInGameStats(playerId, game, matchAmount = 30, latestMatchTime = 0) {
     let param = latestMatchTime !== 0 ? `&to=${latestMatchTime}` : "";
-    return await fetchV4(
+    return await fetchV4Cached(
         playerGamesDataCache,
         `${baseUrlV4}/players/${playerId}/games/${game}/stats?limit=${matchAmount}${param}`,
         "Error when requesting player game data"
@@ -75,7 +74,7 @@ async function fetchPlayerInGameStats(playerId, game, matchAmount = 30, latestMa
 }
 
 async function fetchPlayerStatsById(playerId) {
-    return fetchV4(
+    return fetchV4Cached(
         playerDataCache,
         `${baseUrlV4}/players/${playerId}`,
         "Error when requesting player data by ID"
@@ -83,7 +82,7 @@ async function fetchPlayerStatsById(playerId) {
 }
 
 async function fetchPlayerStatsByNickName(nickname) {
-    return fetchV4(
+    return fetchV4Cached(
         playerDataCache,
         `${baseUrlV4}/players?nickname=${encodeURIComponent(nickname)}`,
         "Error when requesting player data by nickname"

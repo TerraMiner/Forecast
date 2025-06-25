@@ -138,7 +138,7 @@ class Module {
         const checkCondition = async () => {
             if (!isRunning) return;
 
-            const conditionResult = conditionFn();
+            const conditionResult = await conditionFn();
             if (conditionResult) {
                 isRunning = false;
                 if (task) task();

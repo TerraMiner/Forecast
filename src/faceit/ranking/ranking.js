@@ -90,6 +90,7 @@ const rankingModule = new Module("ranking", async () => {
     if (!enabled) return;
     rankingModule.temporaryFaceitBugFix();
     doAfterStatisticNodeAppear(async (node) => {
+        node.parentElement.querySelector(`[class*=forecast-statistic-table]`)?.remove()
         let newNode = getHtmlResource("src/visual/tables/level-progress-table.html").cloneNode(true)
         appendTo(newNode, node);
         node.remove();

@@ -37,40 +37,45 @@ const posCatcherModule = new Module("poscatcher", async () => {
 
     let mapselector = "[name=info] > div[class*=Overview__Stack] > div > div > div > div:nth-child(4) > div > div[class*=middleSlot] > div > div > span > span"
     let chatSelector = "div[class*=MatchRoom__ChatSidebarContainer] > div > div:nth-child(2) > div[class*=ChatSection__ChatContainer] > div > div > div > div > div[class*=MessageInputContainer] > div > div > div[class*=StyledTextArea__TextAreaWrapper] > textarea"
+    let anchorSelector = "[name=info] > div[class*=Overview__Stack] > div[class*=Ready__Container]"
+    posCatcherModule.doAfterNodeAppear(anchorSelector, () => {
+        posCatcherModule.doAfterNodeAppear(mapselector, async (node) => {
+            if (getCookie(cookieKey)) return
+            const key = node.innerText.trim();
+            if (!key) return;
+            const mapPick = maps[key];
+            if (!await isSettingEnabled(`${mapPick}Enabled`)) return
+            let message = await getSettingValue(`${mapPick}Message`, "")
+            if (typeof message !== "string" || message.trim() === "") return
+            posCatcherModule.doAfterAllNodeAppear(chatSelector, (chatInput) => {
+                if (getCookie(cookieKey)) return
+                chatInput.focus();
 
-    posCatcherModule.doAfterNodeAppear(mapselector, async(node) => {
-        const key = node.innerText.trim();
-        if (!key) return;
-        const mapPick = maps[key];
-        if (!await isSettingEnabled(`${mapPick}Enabled`)) return
-        let message = await getSettingValue(`${mapPick}Message`, "")
-        if (typeof message !== "string" || message.trim() === "") return
-        posCatcherModule.doAfterAllNodeAppear(chatSelector, (chatInput) => {
-            chatInput.focus();
+                const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+                descriptor.set.call(chatInput, message);
 
-            const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
-            descriptor.set.call(chatInput, message);
+                chatInput.dispatchEvent(new Event('input', {bubbles: true}));
+                chatInput.dispatchEvent(new Event('change', {bubbles: true}));
 
-            chatInput.dispatchEvent(new Event('input', {bubbles: true}));
-            chatInput.dispatchEvent(new Event('change', {bubbles: true}));
+                chatInput.dispatchEvent(new KeyboardEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true
+                }));
 
-            chatInput.dispatchEvent(new KeyboardEvent('keydown', {
-                key: 'Enter',
-                code: 'Enter',
-                keyCode: 13,
-                which: 13,
-                bubbles: true
-            }));
+                chatInput.dispatchEvent(new KeyboardEvent('keyup', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true
+                }));
 
-            chatInput.dispatchEvent(new KeyboardEvent('keyup', {
-                key: 'Enter',
-                code: 'Enter',
-                keyCode: 13,
-                which: 13,
-                bubbles: true
-            }));
-
-            setCookie(cookieKey,1,1440)
+                setCookie(cookieKey, 1, 1440)
+            })
         })
     })
-}, async () => {})
+}, async () => {
+})
