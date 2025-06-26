@@ -110,18 +110,11 @@ async function getSettingValue(name, def) {
 
 async function isSettingEnabled(name, def) {
     const storageAPI = browserType === FIREFOX ? browser.storage.sync : chrome.storage.sync;
-    const settings = await new Promise((resolve, reject) => {
-        storageAPI.get([name], (result) => {
-            const errorMessage = browserType === FIREFOX ? browser.runtime.lastError : chrome.runtime.lastError;
-            if (errorMessage) {
-                reject(new Error(errorMessage));
-            } else {
-                resolve(result);
-            }
-        });
-    });
+    const settings = await storageAPI.get([name]);
+
     if (settings[name] === undefined) {
-        settings[name] = def
+        await storageAPI.set({ [name]: def });
+        return def;
     }
     return settings[name];
 }
