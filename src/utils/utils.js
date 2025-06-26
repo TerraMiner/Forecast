@@ -108,7 +108,7 @@ async function getSettingValue(name, def) {
     });
 }
 
-async function isSettingEnabled(name) {
+async function isSettingEnabled(name, def) {
     const storageAPI = browserType === FIREFOX ? browser.storage.sync : chrome.storage.sync;
     const settings = await new Promise((resolve, reject) => {
         storageAPI.get([name], (result) => {
@@ -120,24 +120,14 @@ async function isSettingEnabled(name) {
             }
         });
     });
-
-    return settings[name] !== undefined ? settings[name] : false;
+    if (settings[name] === undefined) {
+        settings[name] = def
+    }
+    return settings[name];
 }
 
 async function isExtensionEnabled() {
-    const storageAPI = browserType === FIREFOX ? browser.storage.sync : chrome.storage.sync;
-    const settings = await new Promise((resolve, reject) => {
-        storageAPI.get(['isEnabled'], (result) => {
-            const errorMessage = browserType === FIREFOX ? browser.runtime.lastError : chrome.runtime.lastError;
-            if (errorMessage) {
-                reject(new Error(errorMessage));
-            } else {
-                resolve(result);
-            }
-        });
-    });
-
-    return settings.isEnabled !== undefined ? settings.isEnabled : true;
+    return await isSettingEnabled("isEnabled", true)
 }
 
 function setGradientColor(winrateCell, percent) {

@@ -29,7 +29,7 @@ const maps = {
 };
 
 const posCatcherModule = new Module("poscatcher", async () => {
-    const enabled = await isExtensionEnabled() && await isSettingEnabled("poscatcher");
+    const enabled = await isExtensionEnabled() && await isSettingEnabled("poscatcher", false);
     if (!enabled) return;
     const matchId = extractMatchId();
     const cookieKey = `${matchId}_poscatched`
@@ -45,7 +45,7 @@ const posCatcherModule = new Module("poscatcher", async () => {
             if (!key) return;
             const mapPick = maps[key];
             if (!mapPick) return
-            if (!await isSettingEnabled(`${mapPick}Enabled`)) return
+            if (!await isSettingEnabled(`${mapPick}Enabled`, true)) return
             let message = await getSettingValue(`${mapPick}Message`, "")
             if (typeof message !== "string" || message.trim() === "") return
             posCatcherModule.doAfterAllNodeAppear(chatSelector, (chatInput) => {

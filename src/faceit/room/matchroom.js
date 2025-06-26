@@ -21,7 +21,7 @@
 let teamCache = new Map()
 
 const matchRoomModule = new Module("matchroom", async () => {
-    const enabled = await isExtensionEnabled() && await isSettingEnabled("matchroom");
+    const enabled = await isExtensionEnabled() && await isSettingEnabled("matchroom", true);
     if (!enabled) return;
     matchRoomModule.temporaryFaceitBugFix();
     const matchId = extractMatchId();

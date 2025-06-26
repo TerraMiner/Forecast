@@ -119,7 +119,7 @@ class PartySlot {
 }
 
 const newLevelsModule = new Module("levels", async () => {
-    const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking");
+    const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking", true);
     if (!enabled) return;
     newLevelsModule.temporaryFaceitBugFix();
     hideWithCSS(`[class*="SkillIcon__StyledSvg"]`);

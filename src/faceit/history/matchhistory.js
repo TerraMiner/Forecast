@@ -259,7 +259,7 @@ class MatchNodeByMatchStats {
 }
 
 const matchHistoryModule = new Module("matchhistory", async () => {
-    let enabled = (await isExtensionEnabled()) && (await isSettingEnabled("matchhistory"));
+    let enabled = (await isExtensionEnabled()) && (await isSettingEnabled("matchhistory", true));
     if (!enabled) return;
     matchHistoryModule.temporaryFaceitBugFix();
     await loadMatchHistoryCache();

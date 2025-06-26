@@ -86,7 +86,7 @@ function insertAllLevelsToTable(table, currentLevel) {
 
 let unsubscribe;
 const rankingModule = new Module("ranking", async () => {
-    const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking");
+    const enabled = await isExtensionEnabled() && await isSettingEnabled("eloranking", true);
     if (!enabled) return;
     rankingModule.temporaryFaceitBugFix();
     doAfterStatisticNodeAppear(async (node) => {
